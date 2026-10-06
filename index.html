@@ -65,6 +65,11 @@ html.framed .logcol{position:sticky;height:700px;min-height:0;max-height:none}
 .dot{width:11px;height:11px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 1px rgba(128,128,128,.4)}
 .foe .intent{font-size:12px;color:var(--ink-2);min-height:20px;margin-bottom:7px}
 .foe .intent b{color:var(--flag)}
+/* 약화 미리보기 — 겨눈 카드가 걸 약화로 깎일 다음 공격 */
+/* 깎인 뒤 수치 — 약화 칩 색(보라)으로 숫자만 도드라지게, 뜰 때 한 번 톡 */
+.foe .intent .wk-new{display:inline-block;font-weight:800;font-size:13px;color:#fff;background:var(--p);padding:0 7px;border-radius:9px;margin-right:2px;
+  box-shadow:0 0 8px color-mix(in srgb,var(--p) 70%,transparent);animation:wkpop .22s ease-out}
+@keyframes wkpop{0%{transform:scale(1.5)}100%{transform:scale(1)}}
 .bar{height:12px;background:var(--sunk);border-radius:6px;overflow:hidden;margin-bottom:4px;
   position:relative}
 .bar .hpf{position:absolute;left:0;top:0;bottom:0;background:var(--hp);
@@ -1679,12 +1684,17 @@ function foeAct(f){
   return acts.find(a=>a.k===f.intent)||acts[0];
 }
 /* 적 카드 위에 뜨는 의도 문구 — 표에 적힌 것만 보고 만든다 */
-function intentText(f){
+function intentText(f,pvWeak){
+  // pvWeak — 조준 중인 카드가 이 적에게 걸 약화 턴 수. 깎인 뒤 공격 수치만 보라색으로 쓴다(이미 약화면 그대로)
   const a=foeAct(f), p=[];
   if(a.dmg){
     let d=a.dmg+f.str;
     if(f.weak>0) d=Math.floor(d*0.75);
-    p.push(`${d} 피해`+(a.hits>1?` ×${a.hits}회`:""));
+    const hits=(a.hits>1?` ×${a.hits}회`:"");
+    if(pvWeak>0&&f.weak<=0){
+      const nd=Math.floor(d*0.75);
+      p.push(`<span class="wk-new">${nd}</span> 피해`+hits);
+    } else p.push(`${d} 피해`+hits);
   }
   if(a.str)   p.push(`힘 +${a.str}`);
   if(a.blk)   p.push(`방어도 ${a.blk}`);
@@ -2801,7 +2811,19 @@ function aimRed(f,k){                   // 붉은 테두리 — 겨눈 순간부
   f.style.borderColor=`color-mix(in srgb,#C9483E ${70*e}%,var(--flag))`;
   f.style.boxShadow=`0 0 ${14*e}px ${2*e}px rgba(201,72,62,${0.45*e}), inset 0 0 ${10*e}px rgba(201,72,62,${0.25*e})`;
 }
-function aimCalm(){ aimShook.forEach(f=>{ f.style.transform=""; f.style.transition=""; f.style.borderColor=""; f.style.boxShadow=""; }); aimShook=[]; }
+function aimCalm(){ aimShook.forEach(f=>{ f.style.transform=""; f.style.transition=""; f.style.borderColor=""; f.style.boxShadow=""; }); aimShook=[]; aimPreview([],null); }
+/* 약화 미리보기 — 약화를 거는 카드로 겨누면, 그 적의 다음 공격이 얼마나 깎이는지 의도 칸에 미리 쓴다 */
+let aimPv=new Map();
+function aimPreview(tg,d){
+  const w=(d&&d.weak)||0;
+  const fs=[...document.getElementById("foes").children];
+  fs.forEach((el,i)=>{ const f=S.foes[i]; if(!f) return;
+    const want = tg.indexOf(el)>=0 ? w : 0;
+    if((aimPv.get(el)||0)===want) return;
+    aimPv.set(el,want);
+    const it=el.querySelector(".intent"); if(it&&f.hp>0&&f.intent) it.innerHTML=intentText(f,want);
+  });
+}
 (function aimTick(ts){
   requestAnimationFrame(aimTick);
   const line=document.getElementById("fxaim"), mark=document.getElementById("fxaimmark");
@@ -2831,6 +2853,7 @@ function aimCalm(){ aimShook.forEach(f=>{ f.style.transform=""; f.style.transiti
   // 겨눠진 악귀 — 전체 · 무작위 공격이면 살아 있는 적 모두
   const tg = !snap ? [] : (d.aoe||d.rand) ? fs.filter(f=>f.classList.contains("targetable")) : [fs[idx]];
   aimShook.forEach(f=>{ if(tg.indexOf(f)<0){ f.style.transform=""; f.style.transition=""; f.style.borderColor=""; f.style.boxShadow=""; } });
+  aimPreview(tg, d);
   const k=(ts-aimSince)/1000;
   tg.forEach((f,i)=>{ f.style.transition="none"; f.style.transform=aimShake(ts/1000,k,fs.indexOf(f)); aimRed(f,k); });
   aimShook=tg;
