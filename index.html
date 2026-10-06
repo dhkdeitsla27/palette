@@ -1,0 +1,3498 @@
+<meta charset="utf-8">
+<title>그림 그리는 무당</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme:dark;
+  /* 바탕 — K다크판타지 (먹회색). 이 줄들만 바꾸면 배경 톤이 바뀐다 */
+  --ground:#202124; --surface:#2B2C30; --surface-2:#35363B; --sunk:#17181A;
+  --rule:#3A3B40; --rule-2:#4B4D53;
+  --ink:#DAD7CE; --ink-2:#A3A6B3; --muted:#7A7E8E;
+  /* 안료 — 채도를 낮춘 오방색 */
+  --r:#B8443A; --y:#C9A043; --b:#3F77A8;
+  --o:#C2703A; --g:#4E8A5E; --p:#85529E; --k:#08090B;
+  --w:#E9E4D8;
+  --hp:#C9483E; --blk:#6F95C9; --nrg:#D9A441; --flag:#4FA79D;
+  /* 카드 종이 — 색상 카드는 한지, 나머지는 부적지(괴황지) */
+  --hanji:#EDE6D6; --hanji-2:#DDD4C0; --hanji-rule:#CFC5AE;
+  --hanji-ink:#23211C; --hanji-ink-2:#4A463D; --hanji-muted:#7A7262;
+  --bujeok:#E8D39A; --bujeok-2:#D8C07E; --bujeok-rule:#BFA461;
+  --bujeok-ink:#2B200C; --bujeok-ink-2:#4E3F1E; --bujeok-muted:#7D6634;
+  --jusa:#9E2B22;
+  --sans:"IBM Plex Sans KR","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif;
+  --serif:"Gowun Batang",Georgia,serif;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:14px;line-height:1.6;word-break:keep-all;-webkit-font-smoothing:antialiased;
+  user-select:none}
+.wrap{max-width:1360px;margin:0 auto;padding:16px 16px 24px}
+/* 본판(왼쪽) + 기록(오른쪽). 좁으면 기록이 아래로 내려간다 */
+.board{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:18px;align-items:start}
+.logcol{position:sticky;top:12px;display:flex;flex-direction:column;height:calc(100vh - 110px);min-height:420px;max-height:820px}
+@media(max-width:980px){
+  .board{grid-template-columns:minmax(0,1fr)}
+  .logcol{position:static;height:180px;min-height:0}
+}
+
+/* header */
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+  padding-bottom:10px;border-bottom:2px solid var(--rule-2);margin-bottom:16px;flex-wrap:wrap}
+.top h1{font-family:var(--serif);font-size:20px;margin:0;font-weight:700}
+.top .meta{font-size:12px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
+
+/* enemies */
+.foes{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:14px;min-height:172px}
+.foe{background:var(--surface);border:1px solid var(--rule);border-radius:4px;
+  padding:12px;width:212px;position:relative;transition:border-color .12s,transform .12s}
+.foe.dead{opacity:.34;filter:grayscale(1)}
+.foe.targetable{border-color:var(--flag);cursor:pointer}
+.foe.targetable:hover{transform:translateY(-2px)}
+.foe.acting{border-color:var(--flag);
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--flag) 28%,transparent);
+  transform:translateY(-4px)}
+.foe.waiting{opacity:.5}
+.acttag{position:absolute;top:-10px;left:50%;transform:translateX(-50%);
+  background:var(--flag);color:#fff;font-size:10.5px;font-weight:600;
+  padding:2px 10px;border-radius:9px;white-space:nowrap;letter-spacing:.03em}
+#phase{font-weight:600;padding:2px 10px;border-radius:9px;
+  background:var(--surface-2);color:var(--ink-2)}
+#phase.enemy{background:var(--flag);color:#fff}
+.foe .nm{font-weight:600;font-size:14px;display:flex;align-items:center;gap:7px;margin-bottom:2px}
+.dot{width:11px;height:11px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 1px rgba(128,128,128,.4)}
+.foe .intent{font-size:12px;color:var(--ink-2);min-height:20px;margin-bottom:7px}
+.foe .intent b{color:var(--flag)}
+.bar{height:12px;background:var(--sunk);border-radius:6px;overflow:hidden;margin-bottom:4px;
+  position:relative}
+.bar .hpf{position:absolute;left:0;top:0;bottom:0;background:var(--hp);
+  transition:width .3s}
+.bar .bkf{position:absolute;top:0;bottom:0;background:var(--blk);
+  transition:width .3s,left .3s;box-shadow:inset 1px 0 0 rgba(255,255,255,.35)}
+.foe .hp{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;
+  font-variant-numeric:tabular-nums;gap:8px}
+.bnum{color:var(--blk);font-weight:600;margin-left:1px}
+.pips{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;min-height:21px}
+.pip{font-size:11px;padding:1px 7px;border-radius:9px;background:var(--surface-2);
+  border:1px solid var(--rule);font-weight:500}
+.pip.blk{background:var(--blk);color:#fff;border-color:transparent}
+.pip.shell{background:var(--surface-2);color:var(--ink-2)}
+.pip.vuln{background:var(--r);color:#fff;border-color:transparent}
+.pip.str{background:var(--o);color:#fff;border-color:transparent}
+.pip.weak{background:var(--p);color:#fff;border-color:transparent}
+.pip.burn{background:var(--flag);color:#fff;border-color:transparent}
+.pip.steal{background:var(--y);color:#3A2B00;border-color:transparent}
+.preview{position:absolute;top:9px;right:10px;font-size:17px;font-weight:600;
+  font-variant-numeric:tabular-nums}
+.preview.down{color:var(--r)} .preview.up{color:var(--b)} .preview.same{color:var(--ink-2)}
+
+/* player bar */
+.me{display:flex;gap:14px;align-items:center;flex-wrap:wrap;
+  background:var(--surface);border:1px solid var(--rule);border-radius:4px;
+  padding:10px 14px;margin-bottom:14px}
+.me .stat{display:flex;align-items:center;gap:7px;font-variant-numeric:tabular-nums}
+.me .lab{font-size:11px;color:var(--muted);letter-spacing:.04em}
+.me .val{font-size:17px;font-weight:600}
+.me .val.hpv{color:var(--hp)} .me .val.blkv{color:var(--blk)} .me .val.nrgv{color:var(--nrg)}
+.me .grow{flex:1}
+
+/* palette */
+.palwrap{margin-bottom:14px}
+.secttl{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.05em;
+  margin-bottom:7px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.secttl .hint{font-weight:400;color:var(--flag)}
+.pal{display:flex;gap:10px;flex-wrap:wrap}
+.slot{width:78px;height:78px;border-radius:5px;border:2px solid var(--rule-2);
+  background:var(--surface);display:grid;place-items:center;position:relative;
+  cursor:pointer;transition:transform .12s,border-color .12s,box-shadow .12s}
+.slot:hover{transform:translateY(-2px)}
+.slot .cnt{position:absolute;bottom:3px;right:6px;font-size:10px;color:var(--muted);
+  font-variant-numeric:tabular-nums}
+.slot.empty::after{content:"빈칸";font-size:11px;color:var(--muted)}
+.slot.ok{border-color:var(--g);box-shadow:0 0 0 3px color-mix(in srgb,var(--g) 22%,transparent)}
+.slot.bad{opacity:.4;cursor:not-allowed}
+.slot.merge{border-color:var(--flag);box-shadow:0 0 0 3px color-mix(in srgb,var(--flag) 25%,transparent)}
+.slot.eat{border-color:var(--flag);box-shadow:0 0 0 3px color-mix(in srgb,var(--flag) 30%,transparent)}
+/* 검정 칸 (후보 L1) — 흰 테두리 + 칸 위쪽 가운데에 걸친 작은 자물쇠, 숫자는 칸 가운데 = 풀릴 때까지 남은 턴 */
+.slot.locked{border-color:#E9E4D8;box-shadow:0 0 0 2px rgba(233,228,216,.15);overflow:visible}
+.slot .lock svg{position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:15px;height:16px;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
+.slot .lock{font-size:24px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;
+  text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.slot .tag{position:absolute;top:3px;left:6px;font-size:10px;font-weight:600;
+  color:rgba(255,255,255,.92);text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.slot.pale .tag{color:#23211C;text-shadow:none}
+
+/* 연출 — 물감 혼합. 화면을 다시 그려도 끊기지 않게 render() 바깥의 고정 레이어에 그린다 */
+.fxlayer{position:fixed;top:0;left:0;width:0;height:0;pointer-events:none;z-index:60}
+.fx-blob{position:fixed;width:32px;height:32px;border-radius:52% 46% 50% 44%;
+  box-shadow:0 2px 6px rgba(0,0,0,.28)}
+.fx-cover{position:fixed;border-radius:5px;overflow:hidden}
+.fx-wc,.fx-solid,.fx-edge{position:absolute;top:0;right:0;bottom:0;left:0}
+.fx-edge{border-radius:5px}
+/* 빈칸 덮개 — .slot.empty 와 같은 모습. 번짐은 이 위에 그려진다 */
+.fx-cover.blank{background:var(--surface);border:2px solid var(--rule-2)}
+/* 피해 숫자 — 흰색: 체력 피해 · 파랑: 방어도에 막힌 양 · 빨강(pc): 내가 받은 피해 */
+.fx-num{position:fixed;font-weight:800;font-size:26px;line-height:1;white-space:nowrap;
+  text-shadow:0 2px 0 rgba(0,0,0,.5);font-variant-numeric:tabular-nums}
+.fx-num.hp{color:#F0E6D2} .fx-num.blk{color:#8EB8E8} .fx-num.pc{color:#F07A6E}
+.fx-num small{font-size:12px;font-weight:700;margin-left:3px;color:var(--ink-2)}
+.fx-flash{position:fixed;background:#fff;border-radius:6px}
+/* 카드 사용 — 카드 대역 · 날아가는 물방울 · 물감 튐 · 반짝임 */
+.fx-ghost{position:fixed;border:1px solid var(--bujeok-rule);background:var(--bujeok);border-radius:5px}
+.fx-shot{position:fixed;width:18px;height:18px;border-radius:50%}
+.fx-splat{position:fixed;width:52px;height:52px;border-radius:50%;filter:url(#fxwc)}
+.fx-pop{position:fixed;width:40px;height:40px;border-radius:50%;border:3px solid rgba(190,225,255,.95)}
+.fx-spark{position:fixed;border-radius:50%;background:#DDF0FF;box-shadow:0 0 6px 2px rgba(190,225,255,.8)}
+.fx-flash.hurt{background:var(--hp)}
+.fx-vign{position:fixed;top:0;right:0;bottom:0;left:0;box-shadow:inset 0 0 80px 26px rgba(200,40,40,.7)}
+.fx-cover.blank::after{content:"빈칸";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-size:11px;color:var(--muted)}
+/* 적의 오염 — 먹이 스미기 시작하면 "빈칸" 글씨는 곧바로 사라진다 */
+.fx-cover.blank.quick::after{animation:fxtxtout .2s ease-out forwards}
+@keyframes fxtxtout{to{opacity:0}}
+/* 버린 덱으로 날아가는 카드 사본 */
+.fx-fly{position:fixed;margin:0 !important;pointer-events:none}
+.fx-fly .cost{right:auto;left:-7px} .fx-fly .heldtag{right:auto;left:18px} .fx-fly .cnm{padding-left:12px}
+.fx-bloom{position:absolute;left:50%;top:50%;width:32px;height:32px;margin:-16px 0 0 -16px;border-radius:50%}
+.fx-drop{position:fixed;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border-radius:50%}
+.fx-ring{position:fixed;width:78px;height:78px;margin:-39px 0 0 -39px;border-radius:50%;border:4px solid}
+.fx-label{position:fixed;font-weight:700;font-size:15px;padding:2px 10px;border-radius:999px;
+  background:var(--surface);border:2px solid;white-space:nowrap;color:var(--ink,#23211C)}
+
+/* hand */
+/* 손패 줄 — 양쪽 덱 칸을 같은 폭으로 둬서 손패가 정가운데에 온다 */
+.handrow{display:grid;grid-template-columns:84px minmax(0,1fr) 84px;gap:12px;align-items:end}
+.handrow .pile{margin-bottom:8px}
+.handrow #xpile{justify-self:start}
+.handrow #dpile{justify-self:end}
+.handcol .secttl{justify-content:center}
+/* 안료접시 줄 — 오른쪽 끝에 턴 종료 */
+.palrow{display:flex;gap:12px;align-items:stretch}
+.palrow .pal{flex:1;min-width:0}
+.palrow .endbtn{align-self:center}
+/* 손패 — 커진 카드와 물결이 이웃 카드·위 글자를 덮지 않도록 간격과 위 여백을 둔다 */
+.handcol{flex:1;min-width:0}
+/* 손패 — 슬더슬처럼 겹쳐 부채꼴로 쥔다. 겹침·기울기는 render() 의 layoutHand 가 장수에 맞춰 정한다 */
+.hand{display:flex;flex-wrap:nowrap;justify-content:center;min-height:150px;padding:20px 0 8px}
+/* 카드 비율 — 실제 카드처럼 가로:세로 ≈ 0.7 (92×132). 예전 104×118 은 너무 뚱뚱했다 */
+.card{width:92px;border-radius:5px;border:1px solid var(--rule-2);background:var(--surface);
+  padding:8px 7px;cursor:pointer;position:relative;transition:transform .12s,box-shadow .12s,border-color .12s;
+  display:flex;flex-direction:column;gap:5px;min-height:132px}
+.card:hover{transform:translateY(-4px);box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.card.sel{border-color:#FFFFFF;box-shadow:0 0 0 3px #FFF4D6;
+  transform:translateY(-4px)}
+.card.no{opacity:.45}
+/* 카드 문구 속 바뀐 숫자 — 힘·저항·취약 반영. 슬더슬처럼 오르면 파랑, 내리면 빨강 */
+.card .ctx .mod{font-weight:800;font-size:1.12em}
+.card .ctx .mod.up{color:#1F5FAF}
+.card .ctx .mod.down{color:#B3261E}
+/* 종이 — 카드 안에서만 색 토큰을 종이 색으로 바꿔 끼운다 */
+.card.hanji{--surface:var(--hanji);--surface-2:var(--hanji-2);--rule-2:var(--hanji-rule);
+  --ink:var(--hanji-ink);--ink-2:var(--hanji-ink-2);--muted:var(--hanji-muted);color:var(--ink)}
+.card.bujeok{--surface:var(--bujeok);--surface-2:var(--bujeok-2);--rule-2:var(--bujeok-rule);
+  --ink:var(--bujeok-ink);--ink-2:var(--bujeok-ink-2);--muted:var(--bujeok-muted);color:var(--ink)}
+.card.bujeok .cost:not(.free){background:var(--jusa);color:#F6E9C8}
+.card.held{border-color:var(--flag)}
+/* 선택 — 흰 테두리 + 달빛 흰 띠. 종이 카드 규칙보다 뒤에 둬야 이긴다 */
+.card.sel{border-color:#FFFFFF;box-shadow:0 0 0 3px #FFF4D6}
+/* 손패에서 커서를 올린 카드 — 크게 키워 어느 카드를 보고 있는지 구분한다.
+   아래를 기준으로 위로 커지고, 이웃 카드보다 앞에 그린다. 보상·덱 보기 카드는 그대로 */
+.hand .card{flex:none;transform-origin:50% 100%;z-index:5;   /* 대상 지정 점선(z 4)보다 위 */
+  transform:translateY(var(--dy,0px)) rotate(var(--rot,0deg));
+  transition:transform .14s ease-out,box-shadow .14s}
+/* 커서를 올린 카드 — 똑바로 서서 크게 떠올라, 겹친 이웃 카드보다 앞에서 다 읽힌다 */
+.hand .card:hover{transform:translateY(-8px) rotate(0deg) scale(1.22);z-index:7;   /* 후보 h1 */
+  box-shadow:0 14px 28px rgba(0,0,0,.6)}
+/* 떠오른 카드가 커서를 놓치지 않게 아래로 감지 영역을 늘린다 (안 그러면 깜박인다) */
+.hand .card:hover::after{content:"";position:absolute;left:0;right:0;top:100%;height:44px}
+.hand .card.sel{transform:translateY(-8px) rotate(0deg) scale(1.22);z-index:7}   /* 고른 카드 — 뒤에 흰 물결(w4)이 계속 일렁인다 */
+.hand .card.sel:hover{transform:translateY(-8px) rotate(0deg) scale(1.22);
+  box-shadow:0 0 0 3px #FFF4D6,0 14px 28px rgba(0,0,0,.6)}
+/* 손패에선 오른쪽 카드가 겹쳐 덮으므로 비용·꼬리표를 왼쪽 위로 (슬더슬과 같은 자리) */
+.hand .card .cost{right:auto;left:-7px}
+.hand .card .heldtag{right:auto;left:18px}
+.hand .card .cnm{padding-left:12px}
+/* 기력이 모자라 못 쓰는 카드 — 앞으로 나와 읽히기만 하고 커지지 않는다. 물결도 없다 */
+.hand .card.no:hover{transform:translateY(-6px) rotate(0deg);box-shadow:none}
+/* 적 턴 — 손패를 잠근다. 커서를 올려도 떠오르지 않고, 고를 수도 없다 */
+.hand.locked .card{cursor:default;filter:brightness(.72) saturate(.8)}
+.hand.locked .card:hover{transform:translateY(var(--dy,0px)) rotate(var(--rot,0deg));box-shadow:none;z-index:5}
+.hand.locked .card:hover::after{content:none}
+/* 소리 켬/끔 */
+.menubtn{font:inherit;font-size:12px;padding:2px 11px;border-radius:999px;border:1px solid var(--rule-2);
+  background:transparent;color:var(--ink);cursor:pointer}
+.menubtn:hover,.menubtn.on{border-color:var(--flag);color:var(--flag)}
+.menudd{position:fixed;z-index:58;background:var(--surface);border:1px solid var(--rule-2);border-radius:6px;padding:6px;
+  display:flex;flex-direction:column;min-width:240px;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.menudd[hidden]{display:none}
+.menudd>button{font:inherit;font-size:13px;text-align:left;padding:8px 10px;border:0;border-radius:4px;background:none;color:var(--ink);cursor:pointer}
+.menudd>button:hover{background:var(--surface-2)}
+.menudd .vol{display:flex;align-items:center;gap:8px;padding:8px 10px;font-size:13px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);margin:2px 0}
+.menudd .vol input{flex:1;accent-color:var(--flag);min-width:0}
+.menudd .vol b{font-size:11px;color:var(--muted);width:22px;font-weight:500}
+.menudd .vol button{font:inherit;font-size:11px;border:1px solid var(--rule-2);background:none;color:var(--ink-2);border-radius:4px;padding:1px 7px;cursor:pointer}
+.bookbox{background:var(--surface);border:2px solid var(--flag);border-radius:6px;padding:14px 18px 16px;width:min(680px,100%);
+  display:grid;grid-template-columns:150px 1fr;grid-template-rows:auto 1fr;gap:12px;position:relative}
+.bookbox .bkh{grid-column:1/-1;display:flex;align-items:baseline;gap:10px;border-bottom:1px solid var(--rule);padding-bottom:8px;position:relative}
+.bookbox .bkh span{font-size:11.5px;color:var(--muted)}
+.bookbox .bkh .x{position:absolute;right:-6px;top:-6px;width:28px;height:28px;border:0;background:none;color:var(--muted);font-size:17px;cursor:pointer;border-radius:4px}
+.bookbox .bkh .x:hover{background:var(--surface-2);color:var(--ink)}
+.bookbox .bkl{display:flex;flex-direction:column;gap:2px;overflow:auto;border-right:1px solid var(--rule);padding-right:8px}
+.bookbox .bkl button{font:inherit;font-size:12.5px;text-align:left;padding:6px 8px;border:0;border-radius:4px;background:none;color:var(--ink-2);cursor:pointer;display:flex;gap:8px}
+.bookbox .bkl button i{font-style:normal;color:var(--muted);width:14px;flex:none}
+.bookbox .bkl button.on,.bookbox .bkl button:hover{background:var(--surface-2);color:var(--ink)}
+.bookbox .bkc h4{margin:0 0 10px;font-family:var(--serif);font-size:18px;color:var(--flag)}
+.bookbox .bkc p{margin:0;font-size:13.5px;line-height:1.75}
+.bookbox .bkc p b{color:var(--flag)}
+.bookbox .bkempty{grid-column:1/-1;color:var(--muted);font-size:13px;padding:20px 4px}
+@media(max-width:620px){ .bookbox{grid-template-columns:1fr} .bookbox .bkl{flex-direction:row;flex-wrap:wrap;border-right:0;border-bottom:1px solid var(--rule);padding:0 0 8px} }
+#askover .box .sub2{background:transparent;color:var(--ink);border-color:var(--rule-2)}
+#askover{z-index:70}
+/* 커서를 올린 카드 뒤의 흰 물결(w4)은 #fxaura 에 그린다 — 연출: 카드 테두리 물결 참고 */
+/* 보존된 카드 — 턴이 끝나도 손에 남는다 */
+.card.held{border-color:var(--flag)}
+.card .heldtag{position:absolute;top:-8px;right:-6px;background:var(--flag);color:#0E1A18;
+  font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;letter-spacing:.02em}
+.card .heldtag.vol{background:var(--muted)}
+/* 강화된 카드 — 제목 뒤 + 와 함께 색이 바뀐다 (기획서 §9) */
+.card.upg{border-color:var(--nrg);background:color-mix(in srgb,var(--nrg) 7%,var(--surface))}
+.card.upg .cnm{color:#8A6510}
+/* 모달에서 선택지 위에 붙는 설명 */
+.pickcap{font-size:11px;font-weight:700;color:var(--flag);margin-bottom:5px}
+.card .cnm{font-weight:600;font-size:12.5px;display:flex;align-items:center;gap:5px;line-height:1.3}
+.card .ctx{font-size:11px;color:var(--ink-2);line-height:1.45;flex:1}
+.card .cost{position:absolute;top:-7px;right:-7px;width:23px;height:23px;border-radius:50%;
+  background:var(--nrg);color:#1B1A17;display:grid;place-items:center;
+  font-size:12px;font-weight:600;border:2px solid var(--ground)}
+.card .cost.free{background:var(--surface-2);color:var(--muted)}
+.card .kind{font-size:10px;color:var(--muted);letter-spacing:.04em}
+.endbtn{width:118px;flex:none;border:1px solid var(--rule-2);background:var(--surface);
+  color:var(--ink);border-radius:5px;padding:14px 10px;cursor:pointer;font:inherit;
+  font-weight:600;font-size:13px;transition:background .12s,border-color .12s}
+.endbtn:hover{background:var(--surface-2);border-color:var(--flag);color:var(--flag)}
+.endbtn:disabled{opacity:.4;cursor:default}
+.endbtn small{display:block;font-weight:400;font-size:11px;color:var(--muted);margin-top:3px}
+
+/* foot */
+.pile{font-size:12px;color:var(--muted);background:var(--surface);border:1px solid var(--rule);border-radius:4px;
+  padding:6px 11px;font-variant-numeric:tabular-nums;text-align:center;min-width:66px;
+  cursor:pointer;transition:border-color .12s,transform .12s}
+.pile:hover{border-color:var(--flag);transform:translateY(-2px)}
+.pile b{display:block;font-size:15px;color:var(--ink);font-weight:600}
+
+/* 보상 */
+.rewover{position:fixed;top:0;right:0;bottom:0;left:0;background:var(--ground);background:color-mix(in srgb,var(--ground) 90%,transparent);
+  display:flex;align-items:center;justify-content:center;z-index:58;padding:20px}
+.rewbox{background:var(--surface);border:2px solid var(--rule-2);border-radius:6px;
+  padding:24px 28px 22px;max-width:520px;width:100%;text-align:center;
+  box-shadow:0 10px 40px rgba(0,0,0,.22)}
+.rewbox h2{font-family:var(--serif);font-size:26px;margin:0 0 4px;font-weight:700}
+.rewbox .sub{margin:0 0 18px;font-size:13px;color:var(--ink-2)}
+.rewlist{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+.rewrow{display:flex;align-items:center;gap:13px;padding:12px 14px;width:100%;
+  border:1px solid var(--rule-2);border-radius:5px;background:var(--surface);
+  cursor:pointer;text-align:left;font:inherit;color:var(--ink);
+  transition:border-color .12s,transform .12s}
+.rewrow:hover{border-color:var(--flag);transform:translateX(3px)}
+.rewrow .ic{font-size:19px;width:24px;text-align:center;flex:none;line-height:1}
+.rewrow .tx{flex:1}
+.rewrow .tx b{display:block;font-size:14px;font-weight:600}
+.rewrow .tx span{font-size:12px;color:var(--muted)}
+.rewrow .arw{font-size:12px;color:var(--flag);font-weight:600;flex:none}
+.rewempty{color:var(--muted);font-size:13px;padding:16px 0;text-align:center}
+.rewpick .picktt{margin:0 0 12px;font-size:13px;color:var(--ink-2);font-weight:600}
+.rewcards{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+.rewcards .card{cursor:pointer}
+.rewcards .card:hover{transform:translateY(-6px);
+  box-shadow:0 6px 16px rgba(0,0,0,.18);border-color:var(--flag)}
+.rewpick .skip{font:inherit;font-weight:600;font-size:13px;padding:8px 18px;
+  border-radius:4px;border:1px solid var(--rule-2);background:var(--surface);
+  color:var(--ink-2);cursor:pointer;margin-bottom:18px}
+.rewpick .skip:hover{border-color:var(--flag);color:var(--flag)}
+.rewfoot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.rewfoot .go{font:inherit;font-weight:600;font-size:13.5px;padding:9px 26px;
+  border-radius:4px;border:1px solid var(--ink);background:var(--ink);
+  color:var(--ground);cursor:pointer}
+.rewfoot .dnote{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+/* 덱 열람 */
+.pileover{position:fixed;top:0;right:0;bottom:0;left:0;background:var(--ground);background:color-mix(in srgb,var(--ground) 88%,transparent);
+  display:flex;align-items:center;justify-content:center;z-index:55;padding:20px}
+.pilebox{min-width:0;background:var(--surface);border:2px solid var(--rule-2);border-radius:6px;
+  padding:20px 22px 22px;max-width:780px;width:100%;max-height:84vh;
+  display:flex;flex-direction:column;position:relative;
+  box-shadow:0 10px 40px rgba(0,0,0,.22)}
+.pilebox h3{margin:0;font-family:var(--serif);font-size:21px;font-weight:700}
+.pilebox .sub{margin:3px 0 14px;font-size:12.5px;color:var(--muted)}
+.pilebox .x{position:absolute;top:12px;right:14px;width:30px;height:30px;border:0;
+  background:none;color:var(--muted);font:inherit;font-size:18px;cursor:pointer;
+  border-radius:4px;line-height:1}
+.pilebox .x:hover{background:var(--surface-2);color:var(--ink)}
+.pilegrid{display:flex;flex-wrap:wrap;gap:8px;overflow-y:auto;align-content:flex-start;
+  padding:2px 2px 4px}
+.pilegrid .card{cursor:default}
+.pilegrid .card:hover{transform:none;box-shadow:none}
+/* 고르는 모달 — 여기서는 카드를 누를 수 있다 */
+.pickfoot{margin-top:14px}
+.pickfoot .skip{font:inherit;font-weight:600;font-size:13px;padding:8px 18px;
+  border-radius:4px;border:1px solid var(--rule-2);background:var(--surface);
+  color:var(--ink-2);cursor:pointer}
+.pickfoot .skip:hover{border-color:var(--flag);color:var(--flag)}
+.pilegrid.pick .card{cursor:pointer}
+.pilegrid.pick .card:hover{transform:translateY(-3px);border-color:var(--flag);
+  box-shadow:0 6px 18px rgba(0,0,0,.16)}
+/* 재련 고르기 — 커서를 올리면 살짝 커지고 뒤에 흰 물결(후보 r2). 누르면 빛 알갱이(r4) */
+.pilegrid.forge{padding:10px 8px}
+.pilegrid.forge .card{z-index:2;transition:transform .14s ease-out,box-shadow .14s}
+.pilegrid.pick.forge .card:hover{transform:translateY(-4px) scale(1.08);z-index:3;box-shadow:0 10px 22px rgba(0,0,0,.5)}
+.fx-mote{position:fixed;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border-radius:50%;background:#FFFDF2;
+  box-shadow:0 0 6px 2px rgba(255,250,220,.8)}
+.pileempty{color:var(--muted);font-size:13px;padding:24px 4px}
+
+/* ---- 맵 ---- */
+.mapbox{max-width:860px}
+.maprow{display:flex;align-items:stretch;gap:0;padding:10px 2px 4px;
+  overflow-x:auto;min-width:0}   /* min-width:0 이 없으면 상자가 화면을 넘긴다 */
+.node{flex:1 1 0;min-width:130px;background:var(--surface);border:2px solid var(--rule-2);
+  border-radius:6px;padding:14px 12px;text-align:center;position:relative;
+  transition:transform .12s,border-color .12s}
+.node .ic{font-size:26px;line-height:1.2}
+.node .nnm{font-weight:700;font-size:14px;margin-top:5px}
+.node .nsub{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.4}
+.node .tag{position:absolute;top:-9px;left:50%;transform:translateX(-50%);
+  font-size:10px;font-weight:700;padding:1px 7px;border-radius:3px;white-space:nowrap}
+.node.done{opacity:.55}
+.node.done .tag{background:var(--rule-2);color:var(--ink)}
+.node.now{border-color:var(--flag);cursor:pointer;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--flag) 22%,transparent)}
+.node.now:hover{transform:translateY(-3px)}
+.node.now .tag{background:var(--flag);color:var(--surface)}
+.node.locked{opacity:.34;filter:grayscale(1);border-style:dashed}
+.node.boss{border-width:3px}
+.link{flex:0 0 26px;align-self:center;height:3px;background:var(--rule-2);border-radius:2px}
+.link.done{background:var(--flag)}
+.mapfoot{margin-top:14px;display:flex;justify-content:space-between;align-items:center;
+  font-size:12.5px;color:var(--muted)}
+.mapfoot .go{font:inherit;font-weight:600;padding:8px 18px;border-radius:4px;
+  border:1px solid var(--ink);background:var(--ink);color:var(--surface);cursor:pointer}
+
+/* ---- 모닥불 ---- */
+.camprow{display:flex;gap:14px;flex-wrap:wrap;padding:6px 2px 2px}
+.campopt{flex:1 1 220px;background:var(--surface);border:2px solid var(--rule-2);
+  border-radius:6px;padding:18px 16px;text-align:center;cursor:pointer;
+  transition:transform .12s,border-color .12s,box-shadow .12s}
+.campopt:hover{transform:translateY(-3px);border-color:var(--flag);
+  box-shadow:0 6px 18px rgba(0,0,0,.14)}
+.campopt .ic{font-size:28px;line-height:1.2}
+.campopt .cnm2{font-weight:700;font-size:15px;margin-top:6px}
+.campopt .cdesc{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
+.campopt.no{opacity:.4;cursor:not-allowed}
+.campopt.no:hover{transform:none;border-color:var(--rule-2);box-shadow:none}
+
+/* ---- 상인 ---- */
+.shopsec{margin-bottom:16px}
+.shopsec h4{margin:0 0 8px;font-size:13px;font-weight:700}
+.shoprow{display:flex;flex-wrap:wrap;gap:8px}
+.buyitem{position:relative}
+.buyitem .price{position:absolute;top:-8px;right:-6px;background:var(--nrg);color:#3A2B00;
+  font-size:11px;font-weight:700;padding:1px 6px;border-radius:3px;z-index:2}
+.buyitem.can .card{cursor:pointer;border-color:var(--nrg)}
+.buyitem.can .card:hover{transform:translateY(-3px)}
+.buyitem.no{opacity:.4}
+.buyitem.sold{opacity:.3}
+.buyitem.sold .price{background:var(--rule-2);color:var(--ink-2)}
+.log{flex:1;min-height:0;background:var(--surface);border:1px solid var(--rule);
+  border-radius:4px;padding:9px 12px;overflow-y:auto;font-size:12px;line-height:1.6}
+.log div{color:var(--ink-2);padding:3px 0;border-bottom:1px solid color-mix(in srgb,var(--rule) 55%,transparent)}
+.log div:last-child{border-bottom:0}
+.log div.hi{color:var(--ink);font-weight:500}
+.log div.bad{color:var(--hp)}
+
+/* banner */
+.tips{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.tips:empty{display:none}
+.tip{background:color-mix(in srgb,var(--flag) 12%,var(--surface));border:1px solid var(--flag);
+  border-radius:4px;padding:10px 40px 10px 14px;font-size:13px;
+  position:relative}
+.tip .tt{display:block;font-weight:600;color:var(--flag);margin-bottom:2px;font-size:12.5px}
+.tip b{color:var(--flag)}
+.tip .x{position:absolute;top:6px;right:8px;width:24px;height:24px;border:0;
+  background:none;color:var(--flag);font:inherit;font-size:15px;cursor:pointer;
+  border-radius:4px;line-height:1}
+.tip .x:hover{background:color-mix(in srgb,var(--flag) 20%,transparent)}
+.tip.isnew{animation:newpulse 2s ease-out 1}
+.tip .newtag{display:inline-block;background:var(--flag);color:#fff;font-size:10px;
+  font-weight:600;padding:1px 7px;border-radius:8px;margin-right:8px;letter-spacing:.06em}
+@keyframes newpulse{
+  0%,60%{box-shadow:0 0 0 4px color-mix(in srgb,var(--flag) 34%,transparent)}
+  100%{box-shadow:0 0 0 0 transparent}
+}
+@media(prefers-reduced-motion:reduce){.tip.isnew{animation:none}}
+
+/* 튜토리얼 모달 */
+.tutover{position:fixed;top:0;right:0;bottom:0;left:0;background:var(--ground);background:color-mix(in srgb,var(--ground) 82%,transparent);
+  display:flex;align-items:center;justify-content:center;z-index:60;padding:20px}
+.tutbox{background:var(--surface);border:2px solid var(--flag);border-radius:6px;
+  padding:22px 28px 18px;width:min(440px,100%);position:relative;display:flex;flex-direction:column;
+  box-shadow:0 10px 40px rgba(0,0,0,.22)}
+.tutbox h3{margin:0 0 10px;font-family:var(--serif);font-size:19px;color:var(--flag);
+  font-weight:700;letter-spacing:0}
+.tutbox p{margin:0;font-size:14px;line-height:1.75;color:var(--ink)}
+.tutbox p b{color:var(--flag)}
+.tutbox .x{position:absolute;top:8px;right:10px;width:28px;height:28px;border:0;
+  background:none;color:var(--muted);font:inherit;font-size:17px;cursor:pointer;
+  border-radius:4px;line-height:1}
+.tutbox .x:hover{background:var(--surface-2);color:var(--ink)}
+/* 안내창 속 그림 — 게임 카드·칸을 그대로 써서 반복 시연한다 */
+.tuthead{display:flex;align-items:baseline;gap:10px;padding-right:22px}
+.tuthead h3{margin-bottom:12px}
+.tutn{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.tutnav{margin-top:auto;padding-top:16px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.tutnav .tnb{font:inherit;font-weight:600;font-size:13px;padding:7px 14px;border-radius:4px;border:1px solid var(--rule-2);
+  background:var(--surface-2);color:var(--ink);cursor:pointer}
+.tutnav .tnb:disabled{opacity:.35;cursor:default}
+.tutnav .tnb.ok{margin:0 0 0 auto;border-color:var(--flag);background:var(--flag);color:#fff}
+.tdots{display:flex;gap:6px}
+.tdots i{width:7px;height:7px;border-radius:50%;background:var(--rule-2);cursor:pointer}
+.tdots i.on{background:var(--flag);width:18px;border-radius:4px}
+.tipln{display:block;margin-top:12px;padding:7px 10px;border-radius:4px;background:color-mix(in srgb,var(--nrg) 14%,transparent);font-size:12.5px}
+.tutbox p .tipln b,.bkc p .tipln b{color:var(--nrg)}
+.tutfig{margin:2px 0 14px;border-radius:5px;background:var(--ground);position:relative;height:178px;overflow:hidden}
+.tutfig.flat{height:auto;padding:14px 10px}
+.tutfig.flat .cap{position:static;margin-top:12px}   /* 높이가 자라는 그림 — 설명을 그림 아래에 이어 붙인다 (겹치지 않게) */
+.tutfig .ccard{width:78px;height:113px;flex:none}       /* 색 사용 그림의 카드 — 85%로 줄여 옆 설명과 붙지 않게 */
+.tutfig .ccard .card{transform:scale(.85);transform-origin:0 0}
+.tutfig .ring{position:absolute;width:64px;height:64px;border:3px solid #fff;border-radius:7px;opacity:0;pointer-events:none;z-index:4}
+.tutfig .pop{position:absolute;font-weight:700;font-size:13px;padding:0 9px;border-radius:999px;background:var(--surface);
+  border:2px solid var(--flag);color:var(--ink);opacity:0;white-space:nowrap;z-index:5;transform:translateX(-50%)}
+.tutfig .pop.bad{border-color:var(--hp);color:var(--hp)}
+.tutfig .bl{position:absolute;left:50%;top:50%;width:20px;height:20px;margin:-10px;border-radius:50%;z-index:1}
+.tutfig .slot{overflow:hidden}
+.tutfig .slot.locked{overflow:visible}
+.tutfig .slot .tag{z-index:2}
+.tutfig .card.mini{transform:scale(.7);transform-origin:0 0}
+.tutfig.tall{height:214px}
+.tutfig .card.sel{border-color:#fff;box-shadow:0 0 0 3px #FFF4D6}
+.tutfig .card.dim{opacity:.4;filter:saturate(.5)}
+.tutfig .card.lit{box-shadow:0 0 0 3px #FFF4D6,0 0 18px 4px rgba(255,255,255,.35)}
+.tutfig .card.st{position:relative;left:auto;top:auto}
+.tutfig .slot.sm{width:40px;height:40px}
+.tutfig .slot.sm.empty::after{font-size:9px}
+.tutfig .slot.eat{border-color:var(--flag)!important}
+.tutfig .crow{display:flex;align-items:center;justify-content:center;gap:18px}
+.tutfig .cases{display:flex;flex-direction:column;gap:12px}
+.tutfig .case{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2)}
+.tutfig .case b{font-size:22px;color:var(--ink);line-height:1;min-width:16px}
+.tutfig .case b.up{color:#6FBF73}
+.tutfig .op{color:var(--muted)}
+.tutfig .rhit{font-size:22px;font-weight:800;margin-top:8px;height:30px;display:flex;align-items:center;justify-content:center;gap:6px}
+.tutfig .tfoe .pip2{display:inline-block;font-size:10.5px;padding:0 7px;border-radius:999px;background:#33343A;color:var(--ink-2);margin-top:6px}
+.tutfig .tfoe .blkv{position:absolute;top:8px;right:10px;font-size:15px;font-weight:700;color:var(--blk)}
+.tutfig .pop.blk{border-color:var(--blk);color:var(--blk)}
+.tutfig .mcard{width:30px;height:42px;border-radius:3px;border:1px solid var(--hanji-rule);background:var(--hanji);flex:none;display:grid;place-items:center}
+.tutfig .mcard .dot{width:10px;height:10px}
+.tutfig .stl{position:absolute;left:0;right:0;top:10px;text-align:center}
+.tutfig .pipbig{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;color:var(--nrg);padding:3px 12px;border-radius:999px;background:#33343A;border:1px solid color-mix(in srgb,var(--nrg) 50%,transparent)}
+.tutfig .half{position:absolute;top:50px;bottom:8px;width:50%;padding:0 10px;text-align:center;transition:opacity .3s}
+.tutfig .half.L{left:0;border-right:1px dashed var(--rule-2)}
+.tutfig .half.Rt{right:0}
+.tutfig .half.dimh{opacity:.32}
+.tutfig .ht{font-size:12px;font-weight:700;color:var(--ink)}
+.tutfig .hs{font-size:10.5px;color:var(--muted);margin-bottom:10px}
+.tutfig .deck{display:flex;gap:5px;justify-content:center;height:58px;align-items:center}
+.tutfig .safe{display:flex;gap:14px;justify-content:center;align-items:flex-end;height:58px}
+.tutfig .safe .it{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--muted)}
+.tutfig .res{font-size:11.5px;color:var(--ink-2);margin-top:12px;min-height:18px}
+.tutfig .res .no{color:var(--hp);font-weight:800}
+.tutfig .res .yes{color:var(--flag);font-weight:800}
+.tutfig .tpile{position:absolute;right:26px;top:66px;font-size:12px;color:var(--muted);background:var(--surface);
+  border:1px solid var(--rule);border-radius:4px;padding:6px 11px;text-align:center;min-width:66px}
+.tutfig .tpile b{display:block;font-size:15px;color:var(--ink)}
+.tutfig .tfoe{position:absolute;left:24px;top:16px;width:150px;background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:10px 12px}
+.tutfig .tfoe .nm{font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px}
+.tutfig .rres{position:absolute;right:22px;top:20px;display:flex;flex-direction:column;gap:8px}
+.tutfig .rres div{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-2)}
+.tutfig .rres b{color:var(--hp);font-size:14px}
+/* 색상표 */
+/* 색상표 — 3원색 겹침 그림 */
+.chart{display:flex;justify-content:center}
+.chart .venn{width:96px;height:auto;display:block}
+.chart.big .venn{width:150px}
+.secttl.fold{width:100%;background:none;border:0;padding:0;font:inherit;font-size:12px;cursor:pointer;text-align:left}
+.secttl.fold:hover{color:var(--ink)}
+.secttl.fold .chev{transition:transform .15s}
+.secttl.fold.shut .chev{transform:rotate(-90deg)}
+.secttl.fold.shut{margin-bottom:12px}
+.chartbox{background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:9px 8px;margin-bottom:12px}
+.tutfig .card{position:absolute;left:30px;top:18px;cursor:default}
+.tutfig .card:hover{transform:none;box-shadow:none}
+.tutfig .pal{position:absolute;right:26px;top:56px;gap:8px;flex-wrap:nowrap}
+.tutfig .slot{width:64px;height:64px;cursor:default}
+.tutfig .slot:hover{transform:none}
+.tutfig .drop{position:absolute;width:22px;height:22px;border-radius:52% 46% 50% 44%;opacity:0}
+.tutfig .cap{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:11.5px;color:var(--ink-2)}
+.tutbox .ok{margin-top:16px;font:inherit;font-weight:600;font-size:13px;
+  padding:8px 20px;border-radius:4px;border:1px solid var(--flag);
+  background:var(--flag);color:#fff;cursor:pointer}
+.over{position:fixed;top:0;right:0;bottom:0;left:0;background:var(--ground);background:color-mix(in srgb,var(--ground) 88%,transparent);
+  display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
+.over .box{background:var(--surface);border:2px solid var(--rule-2);border-radius:6px;
+  padding:26px 32px;text-align:center;max-width:340px}
+.over h2{font-family:var(--serif);font-size:26px;margin:0 0 8px}
+.over p{color:var(--ink-2);margin:0 0 16px;font-size:13.5px}
+.over button{font:inherit;font-weight:600;padding:9px 20px;border-radius:4px;
+  border:1px solid var(--ink);background:var(--ink);color:var(--ground);cursor:pointer}
+/* 엽전 아이콘 — 둥근 몸에 네모 구멍(구멍은 뚫려 있어 바탕이 비친다) */
+.coin{width:1.05em;height:1.05em;vertical-align:-.18em;margin-right:2px;flex:none}
+.rewrow .ic .coin{width:22px;height:22px;margin:0}
+/* 가격표는 금빛 바탕이라 엽전을 반전해 검게 — 구멍으로 금빛이 비친다 */
+.buyitem .price .coin path{fill:#2A1F08;stroke:#2A1F08}
+.buyitem .price .coin circle{stroke:#C9A043}
+[hidden]{display:none!important}
+@media(max-width:620px){
+  .slot{width:66px;height:66px}
+  .card{width:96px}
+  .endbtn{width:100%}
+  .handrow{grid-template-columns:1fr 1fr}
+  .handcol{grid-column:1 / -1;grid-row:1}
+  .palrow{flex-direction:column}
+  .palrow .endbtn{align-self:stretch}
+  .pileover,.rewover,.tutover,.over{padding:10px}
+  .pilebox{padding:16px 14px 16px;max-height:90vh}
+  .node{min-width:108px;padding:12px 8px}
+  .node .ic{font-size:22px}
+  .node .nnm{font-size:13px}
+  .node .nsub{font-size:11px}
+  .link{flex-basis:16px}
+  .foe{width:100%;max-width:280px}
+  .campopt{flex:1 1 100%}
+  .rewbox{padding:18px 16px 16px}
+}
+</style>
+
+<!-- 뷰어·변환기 앱은 자바스크립트를 막는 경우가 많다. 이 게임은 화면 전체를
+     자바스크립트로 그리므로, 그런 곳에서는 빈 껍데기만 남는다. 그때 이유를 알려준다 -->
+<noscript>
+  <div style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#B23A32;color:#fff;
+              font:14px/1.7 'Malgun Gothic',sans-serif;padding:16px 18px">
+    <b>자바스크립트가 꺼져 있어 게임을 띄울 수 없습니다.</b><br>
+    이 화면은 껍데기만 그려진 상태입니다. HTML 뷰어·변환기 앱 대신
+    <b>크롬·삼성 인터넷·사파리 같은 실제 브라우저</b>로 열어 주세요.
+  </div>
+</noscript>
+
+
+<!-- 연출용 필터 — 수채 번짐 경계 (fxwc: 혼합, fxwc2: 적의 오염 — 더 거칠고 짙게) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="fxwc" x="-30%" y="-30%" width="160%" height="160%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="11"/>
+    <feDisplacementMap in="SourceGraphic" scale="10"/>
+    <feGaussianBlur stdDeviation="1"/>
+  </filter>
+  <filter id="fxsoft" color-interpolation-filters="sRGB" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.2"/></filter>
+  <filter id="fxsofter" color-interpolation-filters="sRGB" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="6"/></filter>
+  <filter id="fxrough" color-interpolation-filters="sRGB" x="-20%" y="-20%" width="140%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="2" seed="5"/>
+    <feDisplacementMap in="SourceGraphic" scale="3"/>
+  </filter>
+  <filter id="fxwob" color-interpolation-filters="sRGB" x="-40%" y="-40%" width="180%" height="180%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="2"/>
+    <feDisplacementMap in="SourceGraphic" scale="12"/>
+  </filter>
+  <filter id="fxwc2" x="-30%" y="-30%" width="160%" height="160%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" seed="23"/>
+    <feDisplacementMap in="SourceGraphic" scale="18"/>
+    <feGaussianBlur stdDeviation="1.6"/>
+  </filter>
+</svg><div class="wrap">
+<!-- 물결·점선은 .wrap 안에 둔다 — 화면 흔들림(.wrap transform) 동안에도 카드와 같은 층 순서를 지키게 -->
+<!-- 손패 흰 물결(z 6) — 다른 손패 카드(z 5) 위, 커서를 올린·고른 카드(z 7) 아래 -->
+<svg id="fxaura" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:6;pointer-events:none;overflow:visible;display:none"></svg>
+<!-- 대상 지정 점선(z 4: 적 위·손패 아래)과 인장(z 61: 맨 앞) -->
+<svg id="fxaim" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:4;pointer-events:none;overflow:visible"></svg>
+<svg id="fxaimmark" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:61;pointer-events:none;overflow:visible"></svg>
+
+  <div class="top">
+    <h1>그림 그리는 무당</h1>
+    <div class="meta">
+      <span>전투 <b id="bn">1</b></span>
+      <span>턴 <b id="tn">1</b></span>
+      <span id="phase">내 턴</span>
+      <span>덱 <b id="deckn">18</b>장</span>
+      <span><svg class="coin" viewBox="0 0 26 26" aria-label="엽전"><path fill-rule="evenodd" d="M13 1.5a11.5 11.5 0 1 0 0 23a11.5 11.5 0 1 0 0-23zM9.5 9.5h7v7h-7z" fill="#B8923A" stroke="#7A5E1E" stroke-width="1.5"/><circle cx="13" cy="13" r="8.5" fill="none" stroke="#7A5E1E" stroke-width="1"/></svg><b id="gn">0</b>냥</span>
+      <button class="menubtn" id="menubtn" type="button" aria-haspopup="true">☰ 메뉴</button>
+    </div>
+  </div>
+
+  <div class="board">
+  <div class="main">
+  <div class="tips" id="tips"></div>
+
+  <div class="foes" id="foes"></div>
+
+  <div class="me">
+    <div class="stat"><span class="lab">체력</span><span class="val hpv" id="php">80</span><span class="lab">/ 80</span></div>
+    <div class="stat"><span class="lab">방어도</span><span class="val blkv" id="pblk">0</span></div>
+    <div class="stat"><span class="lab">기력</span><span class="val nrgv" id="pnrg">3</span><span class="lab">/ 3</span></div>
+    <div class="grow"></div>
+    <div class="stat" id="pstat"></div>
+  </div>
+
+  <div class="palwrap">
+    <div class="secttl"><span>안료접시</span><span class="hint" id="palhint">칸을 두 개 눌러 혼합 · 기력 0</span></div>
+    <div class="palrow">
+      <div class="pal" id="pal"></div>
+      <button class="endbtn" id="end">턴 종료<small id="endsub"></small></button>
+    </div>
+  </div>
+
+  <div class="handrow">
+    <div class="pile" id="xpile"><b id="xct">0</b>버린 덱</div>
+    <div class="handcol">
+      <div class="secttl"><span>손패 <span id="hct">0</span> / 10</span></div>
+      <div class="hand" id="hand"></div>
+    </div>
+    <div class="pile" id="dpile"><b id="dct">0</b>뽑을 덱</div>
+  </div>
+  </div>
+
+  <!-- 기록 — 채팅창처럼 오른쪽에 길게. 새 줄이 아래에 쌓인다 -->
+  <aside class="logcol">
+    <button class="secttl fold" id="charth" type="button" aria-expanded="true"><span>색상표</span><span class="chev">▾</span></button>
+    <div class="chartbox" id="chartbox"><div class="chart" id="chart"></div></div>
+    <div class="secttl"><span>기록</span></div>
+    <div class="log" id="log"></div>
+  </aside>
+  </div>
+</div>
+
+<div class="rewover" id="rewover" hidden>
+  <div class="rewbox">
+    <h2 id="rewtitle">승리</h2>
+    <p class="sub" id="rewsub"></p>
+
+    <div class="rewlist" id="rewlist"></div>
+
+    <div class="rewpick" id="rewpick" hidden>
+      <p class="picktt" id="picktt">한 장을 덱에 넣습니다</p>
+      <div class="rewcards" id="rewcards"></div>
+      <button class="skip" id="rewback">← 돌아가기</button>
+    </div>
+
+    <div class="rewfoot">
+      <button class="go" id="rewgo">계속</button>
+      <span class="dnote" id="rewdeck"></span>
+    </div>
+  </div>
+</div>
+
+<div class="pileover" id="pileover" hidden>
+  <div class="pilebox">
+    <button class="x" id="pilex" aria-label="닫기">✕</button>
+    <h3 id="pileh"></h3>
+    <p class="sub" id="pilesub"></p>
+    <div class="pilegrid" id="pilegrid"></div>
+  </div>
+</div>
+
+<!-- 카드 고르기 — 보존처럼 손패에서 한 장을 지정해야 하는 효과가 쓴다.
+     이미 카드를 쓴 뒤라 물러설 수 없으므로 닫기·바깥클릭·Esc를 두지 않는다 -->
+<div class="pileover" id="pickover" hidden>
+  <!-- 재련 고르기의 흰 물결 — 창 안에 둬야 창 바탕 위 · 카드 아래에 그릴 수 있다 -->
+  <svg id="fxaura2" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:1;pointer-events:none;overflow:visible;display:none"></svg>
+  <div class="pilebox">
+    <h3 id="pickh"></h3>
+    <p class="sub" id="picksub"></p>
+    <div class="pilegrid pick" id="pickgrid"></div>
+    <div class="pickfoot" id="pickfoot" hidden>
+      <button class="skip" id="pickback">← 돌아가기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 안내창 — 여러 장이면 좌우로 넘겨 읽는다. 그림이 위, 설명이 아래. 크기는 가장 큰 장에 맞춰 고정 -->
+<div class="tutover" id="tutover" hidden>
+  <div class="tutbox" id="tutbox">
+    <button class="x" id="tutx" aria-label="닫기">✕</button>
+    <div class="tuthead"><h3 id="tuth">알아두기</h3><span class="tutn" id="tutn"></span></div>
+    <div class="tutfig" id="tutfig" hidden></div>   <!-- 그림이 있는 안내만 — TUT_FIG -->
+    <p id="tutp"></p>
+    <div class="tutnav"><button class="tnb" id="tutprev">◀ 이전</button><div class="tdots" id="tutdots"></div><button class="tnb ok" id="tutok">확인</button></div>
+  </div>
+</div>
+
+<!-- 맵 — 왼쪽에서 오른쪽으로 한 줄. 갈 수 있는 곳만 눌린다 -->
+<div class="pileover" id="mapover" hidden>
+  <div class="pilebox mapbox">
+    <h3 id="maph">여정</h3>
+    <p class="sub" id="mapsub"></p>
+    <div class="maprow" id="maprow"></div>
+    <div class="mapfoot"><span id="mapstat"></span></div>
+  </div>
+</div>
+
+<!-- 모닥불 — 휴식 또는 재련 -->
+<div class="pileover" id="campover" hidden>
+  <div class="pilebox">
+    <h3>모닥불</h3>
+    <p class="sub" id="campsub"></p>
+    <div class="camprow" id="camprow"></div>
+  </div>
+</div>
+
+<!-- 상인 -->
+<div class="pileover" id="shopover" hidden>
+  <div class="pilebox">
+    <h3>도깨비 상점</h3>
+    <p class="sub" id="shopsub"></p>
+    <div class="shopsec" id="shopbuy"></div>
+    <div class="shopsec" id="shoprm"></div>
+    <div class="mapfoot"><button class="go" id="shopgo">떠나기</button></div>
+  </div>
+</div>
+
+<!-- 상단 메뉴 -->
+<div class="menudd" id="menudd" hidden>
+  <button type="button" data-m="tut">📖 튜토리얼 다시 보기</button>
+  <div class="vol"><span>🔊 소리</span><input type="range" id="volr" min="0" max="100" aria-label="소리 크기"><b id="volv"></b><button type="button" id="volm">끄기</button></div>
+  <button type="button" data-m="new">↻ 새 게임</button>
+  <button type="button" data-m="quit">⏻ 종료</button>
+</div>
+<!-- 튜토리얼 다시 보기 — 왼쪽 목록(짧은 이름) + 오른쪽 내용. 크기는 모든 안내 중 가장 큰 것에 맞춰 고정 -->
+<div class="pileover" id="bookover" hidden>
+  <div class="bookbox" id="bookbox">
+    <div class="bkh"><b>튜토리얼 다시 보기</b><span id="bookn"></span><button class="x" id="bookx" aria-label="닫기">✕</button></div>
+    <div class="bkl" id="bookl"></div>
+    <div class="bkc"><h4 id="bookh"></h4><div class="tutfig" id="bookfig" hidden></div><p id="bookp"></p></div>
+  </div>
+</div>
+<!-- 새 게임 · 종료 확인 -->
+<div class="over" id="askover" hidden>
+  <div class="box"><h2 id="askh"></h2><p id="askp"></p>
+    <button id="askno" class="sub2">취소</button> <button id="askyes">확인</button></div>
+</div>
+<div class="over" id="over" hidden>
+  <div class="box">
+    <h2 id="ovt"></h2>
+    <p id="ovp"></p>
+    <button id="again">다시 하기</button>
+  </div>
+</div>
+
+<script>
+/* 구형 브라우저에서 아래 본 스크립트가 통째로 죽으면 빈 화면이 된다.
+   무슨 일인지 화면에 띄워 준다. 여기는 ES5 문법만 쓴다 */
+window.addEventListener("error",function(e){
+  if(document.getElementById("bootfail")) return;      /* 한 번만 */
+  var d=document.createElement("div");
+  d.id="bootfail";
+  d.style.cssText="position:fixed;top:0;left:0;right:0;z-index:9999;background:#B23A32;"+
+    "color:#fff;font:13px/1.6 sans-serif;padding:12px 14px;white-space:pre-wrap";
+  d.textContent="이 브라우저에서 게임을 실행하지 못했습니다."+String.fromCharCode(10)+
+    (e.message||"")+String.fromCharCode(10)+"(줄 "+(e.lineno||"?")+")";
+  if(document.body) document.body.appendChild(d);
+});
+</script>
+
+<script>
+"use strict";
+const R=1,Y=2,B=4;
+const CNAME={0:"",1:"빨강",2:"노랑",4:"파랑",3:"주황",6:"초록",5:"보라",7:"검정"};
+const CVAR ={1:"--r",2:"--y",4:"--b",3:"--o",6:"--g",5:"--p",7:"--k",W:"--w"};
+/* 하양이 만들 수 있는 7색 — 기획서 §8 "빨 주 노 초 파 보 검" 순서 그대로 */
+const WHITE_MAKES=[["cR",1],["kO",3],["cY",2],["kG",6],["cB",4],["kP",5],["kK",7]];
+const bits=c=>(c&1)+((c>>1)&1)+((c>>2)&1);
+
+/* ---------- card definitions ---------- */
+const DEF={
+  cR:{n:"빨강",kind:"색상",type:"color",comp:R,e:0,tx:"안료접시 한 칸에 빨강을 놓습니다."},
+  cY:{n:"노랑",kind:"색상",type:"color",comp:Y,e:0,tx:"안료접시 한 칸에 노랑을 놓습니다."},
+  cB:{n:"파랑",kind:"색상",type:"color",comp:B,e:0,tx:"안료접시 한 칸에 파랑을 놓습니다."},
+
+  /* 강화값은 기획서 DESIGN_BRANCH_B.md — 타격 6 → 9, 방어 5 → 8.
+     색 소비 시 수치(up)도 같은 폭(+3)으로 올린다: 타격 9 → 12, 수비 8 → 11 */
+  aR:{n:"타격",kind:"공격",type:"atk",req:R,e:1,dmg:6,up:9, upv:{dmg:9,up:12},
+      tx:"{dmg} 피해. 안료접시에 <b>빨강</b>이 있으면 소비하고 <b>{up}</b>."},
+  aY:{n:"타격",kind:"공격",type:"atk",req:Y,e:1,dmg:6,up:9, upv:{dmg:9,up:12},
+      tx:"{dmg} 피해. 안료접시에 <b>노랑</b>이 있으면 소비하고 <b>{up}</b>."},
+  aB:{n:"타격",kind:"공격",type:"atk",req:B,e:1,dmg:6,up:9, upv:{dmg:9,up:12},
+      tx:"{dmg} 피해. 안료접시에 <b>파랑</b>이 있으면 소비하고 <b>{up}</b>."},
+
+  dR:{n:"수비",kind:"방어",type:"def",req:R,e:1,blk:5,up:8, upv:{blk:8,up:11},
+      tx:"방어도 {blk}. 안료접시에 <b>빨강</b>이 있으면 소비하고 <b>{up}</b>."},
+  dY:{n:"수비",kind:"방어",type:"def",req:Y,e:1,blk:5,up:8, upv:{blk:8,up:11},
+      tx:"방어도 {blk}. 안료접시에 <b>노랑</b>이 있으면 소비하고 <b>{up}</b>."},
+  dB:{n:"수비",kind:"방어",type:"def",req:B,e:1,blk:5,up:8, upv:{blk:8,up:11},
+      tx:"방어도 {blk}. 안료접시에 <b>파랑</b>이 있으면 소비하고 <b>{up}</b>."},
+};
+/* 특별 등급 — 혼합 없이 한 장으로 2차색을 놓는다 */
+DEF.kO={n:"주황",kind:"색상 · 특별",type:"color",comp:3,e:1,
+        tx:"빈 칸에 <b>주황</b>을 바로 놓습니다. 합칠 필요가 없습니다."};
+DEF.kG={n:"초록",kind:"색상 · 특별",type:"color",comp:6,e:1,
+        tx:"빈 칸에 <b>초록</b>을 바로 놓습니다. 합칠 필요가 없습니다."};
+DEF.kP={n:"보라",kind:"색상 · 특별",type:"color",comp:5,e:1,
+        tx:"빈 칸에 <b>보라</b>를 바로 놓습니다. 합칠 필요가 없습니다."};
+/* 검정 — 하양 ①로만 손에 들어온다. 놓으면 그 칸이 잠긴다 (쓰레기통을 여는 용도) */
+DEF.kK={n:"검정",kind:"색상 · 저주",type:"color",comp:7,e:0,
+        tx:"빈 칸에 <b>검정</b>을 놓아 잠급니다. 쓰레기통으로 씁니다."};
+
+/* 하양 — 기획서 §8. 안료접시에 들어가지 않는 유일한 컬러 카드이며 두 단계로 쓴다.
+   1단계 cW : 효과 ①/② 중 하나를 골라 고정한 채 손으로 돌아온다
+   2단계 cW1/cW2 : 고정된 효과를 쓴다. 쓰면 소멸한다 */
+/* 고르는 것 자체는 공짜다. 비용은 고른 효과에 붙는다 — ① 0 / ② 1 */
+DEF.cW ={n:"하양",kind:"색상 · 희귀",type:"white",e:0,
+         tx:"특수한 효과 <b>둘 중 하나</b>를 골라 손으로 다시 가져옵니다. "
+           +"<b>색 생성은 0</b>, <b>강화는 1</b>의 기력이 듭니다. 효과를 고르기 전에는 강화할 수 없습니다."};
+/* 하양의 upv 가 비어 있는 것은 의도다 — 하양은 수치가 바뀌는 게 아니라
+   "강화된 하양"이 되는 것 자체가 효과다(강화 지속이 이번 턴 → 이번 전투로 올라간다) */
+DEF.cW1={n:"하양",kind:"색상 · 희귀 · 색 생성",type:"white1",e:0,upv:{},
+         tx:"<b>7색</b> 중 하나를 골라 손에 만듭니다. 만들어진 카드는 <b>이번 턴이 끝나면 소멸</b>합니다. 하양은 소멸."};
+DEF.cW2={n:"하양",kind:"색상 · 희귀 · 강화",type:"white2",e:1,upv:{},
+         tx:"다른 카드 <b>1장을 강화</b>합니다. 하양은 소멸."};
+
+/* ══════════════════════════════════════════════════════════════
+   카드 표 — 여기부터 SKILL_POOL 끝까지가 기획 영역입니다.
+   아래 카드들은 전부 [임시]입니다. 이름·수치·조합 전부 갈아엎으세요.
+   엔진이 지금 읽을 수 있는 필드는 이게 전부입니다:
+
+     n      카드 이름               kind   카드 밑에 뜨는 분류 문구
+     type   "skill"                e      기력 비용
+     tx     설명문(HTML 가능)
+
+     need   요구 색 성분. 성분 하나(R/Y/B/3주/6초/5보) 또는 여러 개를 배열로.
+              need:3          주황 1칸
+              need:[3,6]      주황 1칸 + 초록 1칸 (서로 다른 칸)
+              need:[1,1]      빨강 2칸
+            요구한 만큼 안료접시 앞쪽부터 칸을 찾아 전부 비웁니다.
+            하나라도 못 채우면 낼 수 없습니다. 색 저항은 소비한 성분을 합쳐 판정합니다.
+
+     ── 적에게 ──                   ── 나에게 ──
+     dmg    피해량                  blk    방어도
+     hits   타격 횟수(기본 1)       heal   체력 회복
+     aoe    true면 모든 적          draw   카드 뽑기
+     rand   true면 타격마다 무작위   nrg    기력 획득
+     vuln   취약 N턴                str    힘 N (공격당 피해 +N)
+     weak   약화 N턴                drain  true면 막히지 않은 피해만큼 회복
+     burnT  화상 지속 턴
+     burnD  화상 1턴당 피해         exhaust true면 쓰고 소멸
+
+     ── 손패·덱 ──                  ── 전투 내내 ──
+     discardHand true면 손패를 전부 버림
+     draw        숫자면 그 장수, "버린만큼"이면 discardHand로 버린 장수만큼 뽑음
+     retain      N  카드를 낸 뒤 모달이 떠서 손패(색상 제외)에서 N장을 고른다.
+                 고른 카드는 이번 턴이 끝나도 버려지지 않는다 (한 턴만 유지)
+     retainEach  N  이번 전투 동안 매 턴 종료 시 모달이 떠서 N장을 보존한다.
+                 낸 그 턴부터 적용. 여러 장 내면 합산된다
+     gain        만들어서 손에 넣을 카드의 key. "원색"이면 빨/노/파 중 무작위
+     gainN       gain 장수(기본 1)
+     copyOnDraw  true면 이 카드를 뽑을 때 같은 카드 1장이 손에 더 생김.
+                 그 복제본도 버린 덱을 거쳐 다시 뽑히면 또 복제한다 — 전투 안에서 불어난다.
+                 원본이 강화돼 있으면 복제본도 강화된 채로 나온다 (동일한 카드니까)
+     noResist    true면 적의 색 저항을 무시. 이 전투에만 적용되고 다음 전투에서 풀림
+     wildNeed    true면 이번 턴 동안 스킬의 요구 색을 아무 색 칸으로나 채울 수 있음.
+                 요구 칸 수는 그대로. 그동안 안료접시가 회색으로 보이고, 턴이 끝나면 풀림
+                 (이 카드 자신의 요구 색은 평소대로 치른다)
+     discardN    N  카드를 낸 뒤 손패에서 N장을 골라 버린다. gain 은 버린 뒤에 들어온다.
+                 손패가 N장 이하면 고르지 않고 전부 버린다
+
+     ── 강화 (기획서 §9) ──
+     upv   강화하면 바뀌는 값. 시트의 「강화값」 칸(dmg=9 · dmg=6,hits=3)을 옮긴 것.
+             upv:{dmg:9}              피해 6 → 9
+             upv:{dmg:6,hits:3}       여러 값을 한꺼번에
+             upv:{rand:false,aoe:true} 켜고 끄기 (시트에선 rand=- , aoe=○)
+           upv 가 없는 카드는 강화 대상으로 뜨지 않는다. 카드당 1회만 강화된다.
+           지속은 강화한 수단이 정한다 — 하양=이번 턴 / 강화된 하양=이번 전투 / 재련=영구
+           🚨 하양만은 재련에서 강화할 수 없다. 전투 중에 하양 ②로만 걸린다
+
+     tx 안의 {필드} 는 실제 값으로 바뀐다. 강화되면 강화된 값이 문장에 그대로 들어간다.
+       tx:"{dmg} 피해를 <b>{hits}회</b>."  →  7 피해를 2회 / 강화되면 7 피해를 3회
+     txUp  강화하면 문장 구조까지 바뀌는 카드만 쓴다. 있으면 강화 시 tx 대신 이걸 쓴다.
+           (예: 정전기 "무작위 …" → "모든 적에게 …")
+
+   dmg·burnT·weak·vuln 중 하나라도 있으면 "적을 골라야 하는 카드",
+   전부 없으면 고르는 즉시 발동합니다(aoe·rand도 즉시 발동).
+   여기 없는 효과가 필요하면 말해 주세요 — 핸들러를 추가하겠습니다.
+   ══════════════════════════════════════════════════════════════ */
+
+/* 시트 design/스킬카드_기획시트.xlsx 의 「스킬카드」 탭을 그대로 옮긴 것입니다.
+   카드를 고치려면 시트를 고치고 다시 옮겨 주세요. */
+
+DEF.sO={n:"목장도", kind:"스킬 · 일반", type:"skill", need:3, e:2, dmg:7, hits:2,
+  upv:{hits:3},
+  tx:"<b>주황</b> 소비. {dmg} 피해를 <b>{hits}회</b>."};
+DEF.sG={n:"연화도", kind:"스킬 · 일반", type:"skill", need:6, e:2, dmg:7, blk:7,
+  upv:{blk:10, dmg:10},
+  tx:"<b>초록</b> 소비. 방어도 {blk}을 얻고 {dmg} 피해."};
+DEF.sP={n:"사안검", kind:"스킬 · 일반", type:"skill", need:5, e:2, dmg:7, aoe:true, vuln:1,
+  upv:{vuln:2},
+  tx:"<b>보라</b> 소비. <b>모든 적</b>에게 {dmg} 피해 + 취약 {vuln}."};
+DEF.sRR={n:"창포물", kind:"스킬 · 일반", type:"skill", need:[4,4], e:1, burnT:3, burnD:3,
+  upv:{burnD:5},
+  tx:"<b>파랑x2</b> 소비. 한 대상에게 <b>화상 {burnD}</b>를 <b>{burnT}턴</b> 겁니다."};
+DEF.sYY={n:"칠성검", kind:"스킬 · 일반", type:"skill", need:[2,2], e:1, dmg:3, hits:3, rand:true,
+  upv:{rand:false, aoe:true},
+  tx:"<b>노랑x2</b> 소비. <b>무작위</b> {dmg} 피해를 <b>{hits}회</b>.",
+  txUp:"<b>노랑x2</b> 소비. <b>모든 적</b>에게 {dmg} 피해를 <b>{hits}회</b>."};
+DEF.sBB={n:"산군", kind:"스킬 · 일반", type:"skill", need:[1,1], e:1, dmg:6, aoe:true,
+  upv:{dmg:8},
+  tx:"<b>빨강x2</b> 소비. <b>모든 적</b>에게 {dmg} 피해."};
+DEF.sRY={n:"도깨비 감투", kind:"스킬 · 일반", type:"skill", need:[1,2], e:2, dmg:10, draw:1,
+  upv:{draw:2},
+  tx:"<b>빨강+노랑</b> 소비. 한 대상에게 {dmg} 피해. 카드를 <b>{draw}장</b> 뽑습니다."};
+DEF.sRB={n:"솟대", kind:"스킬 · 일반", type:"skill", need:[1,4], e:2, blk:10, draw:1,
+  upv:{draw:2},
+  tx:"<b>빨강+파랑</b> 소비. 방어도 {blk}을 얻고, 카드를 <b>{draw}장</b> 뽑습니다."};
+DEF.sYB={n:"쑥과 마늘", kind:"스킬 · 일반", type:"skill", need:[2,4], e:2, dmg:4, aoe:true, drain:true, exhaust:true,
+  upv:{dmg:5},
+  tx:"<b>노랑+파랑</b> 소비. <b>모든 적</b>에게 {dmg} 피해. 막히지 않은 피해만큼 체력을 <b>회복</b>합니다. 소멸."};
+DEF.sYP={n:"떡국", kind:"스킬 · 희귀", type:"skill", need:[2,5], e:0, nrg:2, exhaust:true,
+  upv:{nrg:3},
+  tx:"<b>노랑+보라</b> 소비. <b>기력 {nrg}</b>을(를) 얻습니다. 소멸."};
+DEF.sBO={n:"병풍", kind:"스킬 · 희귀", type:"skill", need:[4,3], e:2, blk:30, exhaust:true,
+  upv:{blk:40},
+  tx:"<b>파랑+주황</b> 소비. 방어도를 {blk} 얻습니다. 소멸."};
+DEF.sRG={n:"심봉사", kind:"스킬 · 희귀", type:"skill", need:[1,6], e:3, exhaust:true, wildNeed:true,
+  upv:{e:2},
+  tx:"<b>빨강+초록</b> 소비. <b>이번 턴</b> 동안 스킬의 요구 색을 <b>아무 색 칸으로나</b> 채웁니다(칸 수는 그대로). 소멸."};
+DEF.sB={n:"도깨비 불", kind:"스킬 · 일반", type:"skill", need:4, e:0, dmg:4, exhaust:true, copyOnDraw:true,
+  upv:{dmg:6},
+  tx:"<b>파랑</b> 소비. {dmg} 피해. 이 카드를 뽑으면 동일한 카드를 추가로 1장 얻습니다. 소멸."};
+DEF.sYO={n:"사구파토", kind:"스킬 · 희귀", type:"skill", need:[2,3], e:0, draw:"버린만큼", exhaust:true, discardHand:true,
+  upv:{exhaust:false},
+  tx:"<b>노랑+주황</b> 소비. 손에 들고 있는 카드를 전부 버립니다. 버린 카드의 수만큼 카드를 다시 뽑습니다. 소멸.",
+  txUp:"<b>노랑+주황</b> 소비. 손에 들고 있는 카드를 전부 버립니다. 버린 카드의 수만큼 카드를 다시 뽑습니다."};
+DEF.sR={n:"복주머니", kind:"스킬 · 희귀", type:"skill", need:1, e:1, retainEach:1, exhaust:true,
+  upv:{retainEach:2},
+  tx:"<b>빨강</b> 소비. 이번 전투 동안 <b>매 턴 종료 시</b> 카드 <b>{retainEach}장</b>을 <b>보존</b>합니다. 소멸."};
+DEF.sY={n:"장승", kind:"스킬 · 일반", type:"skill", need:2, e:1, aoe:true, vuln:1, weak:1,
+  upv:{vuln:2, weak:2},
+  tx:"<b>노랑</b> 소비. <b>모든 적</b>에게 약화 {weak}, 취약 {vuln}을 부여합니다."};
+DEF.sRYP={n:"윤회", kind:"스킬 · 희귀", type:"skill", need:[1,2,5], e:3, blk:5, heal:10, exhaust:true,
+  upv:{heal:15},
+  tx:"<b>빨강+노랑+보라</b> 소비. 방어도 {blk}를 얻고 체력을 {heal} 회복합니다. 소멸."};
+DEF.sYBG={n:"뚝딱!", kind:"스킬 · 희귀", type:"skill", need:[2,4,6], e:0, exhaust:true, discardN:3, gain:"cW", gainN:3,
+  upv:{gainN:5},
+  tx:"<b>노랑+파랑+초록</b> 소비. 손패 <b>{discardN}장</b>을 골라 버리고 <b>하양</b> 색상카드 <b>{gainN}장</b>을 얻습니다. 소멸."};
+DEF.sRBO={n:"까치", kind:"스킬 · 희귀", type:"skill", need:[1,4,3], e:0, exhaust:true, gain:"원색", gainN:3,
+  upv:{gainN:5},
+  tx:"<b>빨강+파랑+주황</b> 소비. <b>무작위 원색 색상카드 {gainN}장</b>을 얻습니다. 소멸."};
+
+/* 보상 풀 — 색상과 스킬을 나눠서 준다. 기본 공격·방어는 보상에 없다(슬더슬 관습) */
+const COLOR_POOL=[
+  {k:"cR",w:20},{k:"cY",w:20},{k:"cB",w:20},   // 일반
+  {k:"kO",w:10},{k:"kG",w:10},{k:"kP",w:10},   // 특별(2차색, 한 장으로 바로 배치)
+  {k:"cW",w:4}                                 // 희귀(하양, 와일드) — 시작 덱에는 없다
+];
+const SKILL_POOL=[
+  // 일반
+  {k:"sO",w:10},{k:"sG",w:10},{k:"sP",w:10},{k:"sRR",w:10},
+  {k:"sYY",w:10},{k:"sBB",w:10},{k:"sRY",w:10},{k:"sRB",w:10},
+  {k:"sYB",w:10},{k:"sB",w:10},{k:"sY",w:10},
+  // 희귀
+  {k:"sYP",w:4},{k:"sBO",w:4},{k:"sRG",w:4},{k:"sYO",w:4},
+  {k:"sRYP",w:4},{k:"sYBG",w:4},{k:"sRBO",w:4},{k:"sR",w:4}
+];
+function pickFrom(pool,n){
+  const bag=pool.map(o=>({...o})), out=[];
+  for(let i=0;i<n&&bag.length;i++){
+    let tot=bag.reduce((s,o)=>s+o.w,0), r=Math.random()*tot, j=0;
+    while(r>bag[j].w && j<bag.length-1){ r-=bag[j].w; j++; }
+    out.push(bag[j].k); bag.splice(j,1);
+  }
+  return out;
+}
+/* 전역 상수 */
+const PRIMARY=["cR","cY","cB"];   // gain:"원색" 이 뽑는 후보
+const DRAW=5;        // 매 턴 드로우
+const HAND_MAX=10;   // 손패 상한
+const START=["cR","cR","cR","cY","cY","cY","cB","cB","cB",
+             "aR","aY","aB","dR","dY","dB",
+             "sO","sG","sP"];
+
+/* ---------- 튜토리얼 ---------- */
+const TUT={
+  block:  ["방어도는 한 턴만 간다",
+    "방어도만큼 받는 피해가 줄어듭니다. 피해가 방어도보다 크면 <b>넘친 만큼만</b> 체력이 깎입니다.<br><br>"+
+    "남은 방어도는 <b>다음 턴에 사라집니다.</b>"],
+  place:  ["색을 놓는 법",
+    "색상 카드를 고른 뒤 <b>안료접시 칸</b>을 누르면 색이 놓입니다. 색상 카드는 <b>기력을 쓰지 않습니다.</b>"],
+  consume:["색은 자동으로 쓰인다",
+    "타격·수비는 <b>안료접시에 맞는 색이 있으면 알아서 소비하고 더 강해집니다.</b> 따로 고를 필요는 없습니다.<br><br>"+
+    "카드를 고르면 <b>어느 칸이 쓰일지</b> 테두리로 보입니다."],
+  keep:   ["색상 카드는 손에 남는다",
+    "턴이 끝나면 <b>색상 카드만 손에 남고</b> 나머지는 버린 덱으로 갑니다.<br><br>"+
+    "다음 턴에도 카드는 5장을 뽑지만, <b>손패는 최대 10장</b>이라 손이 가득 차면 더 들어오지 않습니다."],
+  merge:  ["색을 섞는 법",
+    "<b>① 칸 두 개를 차례로 누르면</b> 두 칸의 색이 하나로 합쳐지고, <b>한 칸이 빕니다.</b><br>"+
+    "<b>② 색이 든 칸에 색상 카드를 놓아도</b> 바로 섞입니다.<br><br>"+
+    "어느 쪽이든 <b>기력은 들지 않습니다.</b> 놓을 자리가 없으면 <b>칸끼리 섞어</b> 자리를 만들거나, 카드를 써서 칸을 비우세요."+
+    `<span class="tipln">TIP · 색 조합은 <b>3원색 그림</b>(오른쪽 색상표)을 참고하세요!</span>`],
+  overlap:["같은 색이 든 칸에는 놓을 수 없다",
+    "칸에 이미 든 색과 <b>같은 색이 섞여 있으면</b> 놓을 수도, 합칠 수도 없습니다. 빨강 칸에는 <b>빨강도, 주황도</b> 못 놓습니다. 주황에 빨강이 들어 있기 때문입니다.<br><br>"+
+    "<b>혼합색끼리도 합칠 수 없습니다.</b>"],
+  resist: ["악귀의 색 저항",
+    "악귀는 <b>자기 색 공격에 강합니다.</b> 빨간 악귀에게 빨강 공격은 피해가 <b>30%</b>, 주황·보라 공격은 <b>10%</b> 줄어듭니다.<br><br>"+
+    "카드를 고르면 적 카드 위와 <b>카드 문구</b>에 실제로 들어갈 피해가 표시됩니다."],
+  needcolor:["색이 있어야 쓸 수 있다",
+    "혼합색 스킬은 <b>필요한 색 칸이 안료접시에 있어야</b> 쓸 수 있습니다. 지금은 그 칸이 없습니다.<br><br>"+
+    "색을 놓고 칸끼리 섞어 만드세요. 타격·수비는 색이 없어도 쓸 수 있습니다."],
+  black:  ["검정 칸",
+    "<b>검정 칸</b>은 칸에 적힌 숫자만큼 턴이 지나야 풀립니다. 그동안은 쓸 수 없습니다.<br><br>"+
+    "필요 없는 색은 검정 칸에 버릴 수 있습니다. <b>안료접시 칸이나 색상 카드를 고른 뒤 검정 칸을 누르세요.</b> "+
+    "버릴 때마다 숫자가 1 늘어나고, 풀리면 안에 든 카드가 버린 덱으로 돌아옵니다.<br><br>"+
+    "아무것도 고르지 않고 검정 칸을 누르면 <b>안에 든 카드</b>를 볼 수 있습니다."],
+  shell:  ["투명화",
+    "이 악귀는 처음 맞으면 투명해져 <b>방어도를 최대 6</b> 얻습니다. 투명화는 <b>한 번만</b> 일어납니다."],
+  steal:  ["꾀어내기",
+    "적 카드에 <b>꾀어내기 · 노랑</b>이 보이면, 그 적은 <b>뽑을 덱이나 버린 덱의 노랑 카드 한 장</b>을 이 전투 동안 없앱니다.<br><br>"+
+    "<b>손패나 안료접시에 있는 노랑은 가져가지 못합니다.</b>"]
+};
+/* 안내 순서 — 넘겨 읽는 창과 「튜토리얼 다시 보기」 목록이 이 순서를 따른다. 기본부터 앞에 */
+const TUT_ORDER=["block","place","consume","keep","merge","overlap","resist","needcolor","black","shell","steal"];
+/* 다시 보기 목록에만 쓰는 짧은 이름 (5자 이내). 눌렀을 때 내용은 TUT 그대로 */
+const TUT_SHORT={block:"방어도",place:"색을 놓는 법",consume:"색 사용",keep:"색상 카드",merge:"색을 섞는 법",
+  overlap:"혼합 불가",resist:"악귀 색 저항",needcolor:"스킬 조건",black:"검정 칸",shell:"투명화",steal:"꾀어내기"};
+let tutQ=[], tutOpen=false, resumeFn=null;
+
+/* 자물쇠 + 숫자 (검정 칸) */
+function lockHTML(n){
+  return `<svg viewBox="0 0 20 22" aria-hidden="true"><path d="M5.5 10V7a4.5 4.5 0 0 1 9 0v3" fill="none" stroke="#E9E4D8" stroke-width="2.4" stroke-linecap="round"/>
+    <rect x="2.5" y="9.5" width="15" height="11" rx="2.5" fill="#E9E4D8"/><circle cx="10" cy="14.4" r="1.6" fill="#08090B"/><rect x="9.2" y="14.6" width="1.6" height="3" rx=".8" fill="#08090B"/></svg><span>${n}</span>`;
+}
+/* ---------- 색상표 — 3원색 겹침 그림. 두 원이 겹친 자리 = 혼합색, 셋이 겹친 가운데 = 검정 ----------
+   안내창(색을 섞는 법)과 기록 위 상시 표에 같이 쓴다. id 는 그림마다 달라야 해서 pre 를 붙인다 */
+function chartHTML(pre){
+  const C={1:[44,40],2:[76,40],4:[60,67]}, r=26;   // 빨강 왼쪽 위 · 노랑 오른쪽 위 · 파랑 아래
+  const circ=(c,fill)=>`<circle cx="${C[c][0]}" cy="${C[c][1]}" r="${r}" fill="${fill}"/>`;
+  const clip=c=>`<clipPath id="${pre}${c}">${circ(c,"#000")}</clipPath>`;
+  const two=(a,b)=>`<g clip-path="url(#${pre}${a})">${circ(b,pigment(a|b))}</g>`;
+  return `<svg class="venn" viewBox="10 6 100 92" role="img" aria-label="빨강+노랑=주황, 노랑+파랑=초록, 빨강+파랑=보라, 셋 다=검정">
+    <defs>${clip(R)}${clip(Y)}${clip(B)}</defs>
+    ${circ(R,pigment(R))}${circ(Y,pigment(Y))}${circ(B,pigment(B))}
+    ${two(R,Y)}${two(Y,B)}${two(R,B)}
+    <g clip-path="url(#${pre}${R})"><g clip-path="url(#${pre}${Y})">${circ(B,pigment(7))}</g></g>
+    ${[R,Y,B].map(c=>`<circle cx="${C[c][0]}" cy="${C[c][1]}" r="${r}" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="1"/>`).join("")}
+  </svg>`;
+}
+/* ---------- 안내창 그림 — 글만으로 부족한 안내에 반복 시연을 붙인다 ----------
+   fig: 그림 칸 · run: 이 창의 번호. 창이 닫히거나 바뀌면 tutFigRun 이 올라가 반복이 멈춘다 */
+let tutFigRun=0;
+document.getElementById("chart").innerHTML=chartHTML("cv");
+/* 색상표 접기 — 처음엔 펼쳐 두고, 접으면 「색상표」 글자만 남는다. 이 브라우저에 기억 */
+(function(){
+  const h=document.getElementById("charth"), box=document.getElementById("chartbox");
+  const set=open=>{ box.hidden=!open; h.setAttribute("aria-expanded",open); h.classList.toggle("shut",!open); };
+  let open=true; try{ open = localStorage.getItem("ps-chart")!=="shut"; }catch(e){}
+  set(open);
+  h.onclick=()=>{ open=!open; set(open); try{ localStorage.setItem("ps-chart",open?"open":"shut"); }catch(e){} };
+})();
+/* 그림 칸 도우미 — 칸·방울·톡·번짐. 전부 그림 칸(fig) 안 좌표로 움직인다 */
+const tf={
+  wait:ms=>new Promise(r=>setTimeout(r,ms)),
+  pos(fig,e){ const o=fig.getBoundingClientRect(), r=e.getBoundingClientRect(); return {x:r.left-o.left,y:r.top-o.top,w:r.width,h:r.height}; },
+  paint(s,c){ s.className="slot"; s.style.background=pigment(c); s.style.borderColor=pigment(c);
+    s.innerHTML=c===7?"":`<span class="tag">${CNAME[c]}</span>`; },
+  black(s,n){ s.className="slot locked"; s.style.background=pigment(7); s.style.borderColor=""; s.innerHTML=`<span class="lock">${lockHTML(n)}</span>`; },
+  clear(s){ s.className="slot empty"; s.style.background=""; s.style.borderColor=""; s.innerHTML=""; },
+  pal(fig,n,css){ const p=el("div","pal"); if(css) p.style.cssText=css; const out=[];
+    for(let i=0;i<n;i++){ const s=el("div","slot empty"); p.appendChild(s); out.push(s); } fig.appendChild(p); return out; },
+  cap(fig){ const c=el("div","cap"); fig.appendChild(c); return c; },
+  tap(fig,s,sp){ sp=sp||1; const p=tf.pos(fig,s), g=el("div","ring"); fig.appendChild(g);
+    g.style.left=p.x+"px"; g.style.top=p.y+"px"; g.style.width=p.w+"px"; g.style.height=p.h+"px";
+    g.animate([{opacity:0,transform:"scale(1.25)"},{opacity:1,transform:"scale(1)",offset:.35},{opacity:0}],{duration:520/sp}).onfinish=()=>g.remove();
+    return tf.wait(420/sp); },
+  // 실제 게임처럼 — 카드가 작아지며 물방울이 되고, 칸 위로 날아가 똑 떨어진다. 카드는 사라진 채로 남는다
+  useCard(fig,card,s,c){
+    const p=tf.pos(fig,card), q=tf.pos(fig,s), d=el("div","drop"); d.style.background=pigment(c); fig.appendChild(d);
+    const cx=p.x+p.w/2-11, cy=p.y+p.h/2-11, x1=q.x+q.w/2-11, y1=q.y+q.h/2-11;
+    card.animate([{transform:"scale(1)",opacity:1},{transform:"scale(.2)",opacity:0}],{duration:240,easing:"ease-in",fill:"forwards"})
+      .finished.then(()=>{ card.style.opacity="0"; card.getAnimations().forEach(a=>a.cancel()); });
+    return d.animate([{left:cx+"px",top:cy+"px",opacity:0,transform:"scale(.4)"},{left:cx+"px",top:cy+"px",opacity:1,transform:"scale(1)",offset:.22},
+        {left:(cx+x1)/2+"px",top:(Math.min(cy,y1)-50)+"px",opacity:1,transform:"scale(.9)",offset:.55},
+        {left:x1+"px",top:(y1-40)+"px",opacity:1,transform:"scale(.85,1.15)",offset:.75},
+        {left:x1+"px",top:y1+"px",opacity:1,transform:"scale(1.6,.4)",offset:.93},{left:x1+"px",top:y1+"px",opacity:0,transform:"scale(2,.2)"}],
+      {duration:1050,easing:"ease-in-out",fill:"both"}).finished.then(()=>d.remove()); },
+  show(card){ card.getAnimations().forEach(a=>a.cancel()); card.style.opacity="1"; },
+  // a → b 로 물감 방울. 닿으면 resolve
+  fly(fig,a,b,c,arc){ const p=tf.pos(fig,a), q=tf.pos(fig,b), d=el("div","drop"); d.style.background=pigment(c); fig.appendChild(d);
+    const x0=p.x+p.w/2-11, y0=p.y+Math.min(p.h/2,40)-11, x1=q.x+q.w/2-11, y1=q.y+q.h/2-11;
+    return d.animate([{left:x0+"px",top:y0+"px",opacity:0,transform:"scale(.5)"},{opacity:1,offset:.15},
+        {left:(x0+x1)/2+"px",top:(Math.min(y0,y1)-(arc||50))+"px",opacity:1,transform:"scale(.9)",offset:.55},
+        {left:x1+"px",top:y1+"px",opacity:1,transform:"scale(1.6,.4)",offset:.92},{left:x1+"px",top:y1+"px",opacity:0,transform:"scale(2,.2)"}],
+      {duration:850,easing:"ease-in-out",fill:"both"}).finished.then(()=>d.remove()); },
+  // 칸 안에서 결과 색이 가운데부터 번진다
+  bloom(s,c){ const b=el("div","bl"), col=pigment(c);
+    b.style.background = c===7 ? col : `radial-gradient(circle, color-mix(in srgb,${col} 72%,#fff) 0 40%, ${col} 66%, color-mix(in srgb,${col} 68%,#000) 88%, transparent 100%)`;
+    s.appendChild(b);
+    s.animate([{transform:"scale(1)"},{transform:"scale(.94)"},{transform:"scale(1.05)"},{transform:"scale(1)"}],{duration:400});
+    return b.animate([{transform:"scale(0)"},{transform:"scale(2.2)",offset:.45},{transform:"scale(5)"}],
+      {duration:900,easing:"cubic-bezier(.2,.65,.3,1)",fill:"forwards"}).finished; },
+  pop(fig,e,txt,bad){ const p=tf.pos(fig,e), l=el("div","pop"+(bad===true?" bad":bad?" "+bad:""),txt); fig.appendChild(l);
+    l.style.left=(p.x+p.w/2)+"px"; l.style.top=Math.max(2,p.y-24)+"px";
+    l.animate([{opacity:0,marginTop:"6px"},{opacity:1,marginTop:"0px",offset:.2},{opacity:1,offset:.8},{opacity:0,marginTop:"-8px"}],{duration:1300,fill:"both"}).onfinish=()=>l.remove(); },
+  shake(e){ return e.animate([{translate:"0"},{translate:"-6px"},{translate:"6px"},{translate:"-4px"},{translate:"0"}],{duration:380}).finished; },
+  // 카드가 살짝 떠올랐다 내려온다 (고른 표시)
+  lift(c){ c.animate([{translate:"0 0"},{translate:"0 -10px",offset:.4},{translate:"0 0"}],{duration:700,easing:"ease-out"}); },
+  // 시나리오를 창이 열려 있는 동안 반복한다
+  loop(run,body,gap){ (async()=>{ await tf.wait(400);
+    while(run===tutFigRun){ if(await body()===false) return; await tf.wait(gap||1500); } })(); },
+};
+const TUT_FIG={
+  // 색을 놓는 법 — 색상 카드를 고르고 빈칸을 누르면, 카드가 물방울이 되어 칸에 떨어진다
+  place(fig,run){
+    const card=makeCardEl(DEF.cR); fig.appendChild(card);
+    const [s1]=tf.pal(fig,2), cap=tf.cap(fig), ok=()=>run===tutFigRun;
+    cap.textContent="색상 카드를 고르고 → 빈칸을 누른다";
+    tf.loop(run,async()=>{
+      tf.show(card); tf.clear(s1); card.classList.remove("sel");
+      await tf.wait(300); if(!ok()) return false;
+      card.classList.add("sel"); tf.lift(card); await tf.wait(600); if(!ok()) return false;
+      await tf.tap(fig,s1); if(!ok()) return false;
+      card.classList.remove("sel");
+      await tf.useCard(fig,card,s1,R); if(!ok()) return false;
+      tf.paint(s1,R); s1.animate([{transform:"scale(1)"},{transform:"scale(.94)"},{transform:"scale(1.05)"},{transform:"scale(1)"}],{duration:380});
+    },1500);
+  },
+  // 색을 섞는 법 — ① 칸 두 개 → ② 색이 든 칸에 카드, 번갈아
+  merge(fig,run){
+    const card=makeCardEl(DEF.cB); card.style.opacity="0"; fig.appendChild(card);
+    const [s1,s2]=tf.pal(fig,2), cap=tf.cap(fig), ok=()=>run===tutFigRun;
+    const pal=fig.querySelector(".pal");
+    const center=on=>{ pal.style.left=on?"50%":""; pal.style.right=on?"auto":""; pal.style.transform=on?"translateX(-50%)":""; };
+    let k=0;
+    tf.loop(run,async()=>{
+      if(k++%2===0){
+        card.style.opacity="0"; center(true);   // ① 카드가 없으니 칸 두 개를 가운데에
+        tf.paint(s1,R); tf.paint(s2,Y); cap.textContent="① 칸 두 개를 차례로 누르면 합쳐지고 한 칸이 빈다";
+        await tf.tap(fig,s1); if(!ok()) return false;
+        await tf.tap(fig,s2); if(!ok()) return false;
+        const f=tf.fly(fig,s1,s2,R,40); tf.clear(s1); await f; if(!ok()) return false;
+        tf.pop(fig,s2,CNAME[R|Y]+"!"); await tf.bloom(s2,R|Y); if(!ok()) return false; tf.paint(s2,R|Y);
+      } else {
+        center(false); tf.show(card); card.classList.remove("sel");   // ② 카드 왼쪽 · 칸 오른쪽
+        tf.paint(s1,Y); tf.clear(s2); cap.textContent="② 색이 든 칸에 색상 카드를 놓아도 섞인다";
+        await tf.wait(300); if(!ok()) return false;
+        card.classList.add("sel"); tf.lift(card); await tf.wait(600); if(!ok()) return false;
+        await tf.tap(fig,s1); if(!ok()) return false;
+        card.classList.remove("sel");
+        await tf.useCard(fig,card,s1,B); if(!ok()) return false;
+        tf.pop(fig,s1,CNAME[Y|B]+"!"); await tf.bloom(s1,Y|B); if(!ok()) return false; tf.paint(s1,Y|B);
+      }
+    },1500);
+  },
+  // 같은 색이 든 칸 — 세 장면, 1.25배 빠르게
+  overlap(fig,run){
+    const SP=1.25;
+    const card=makeCardEl(DEF.cR); fig.appendChild(card);
+    const [s1,s2]=tf.pal(fig,2), cap=tf.cap(fig), ok=()=>run===tutFigRun;
+    let k=0;
+    const refuse=async(from,to,c)=>{ const d=el("div","drop"); d.style.background=pigment(c); fig.appendChild(d);
+      const p=tf.pos(fig,from), q=tf.pos(fig,to), x0=p.x+p.w/2-11, y0=p.y+Math.min(p.h/2,40)-11, x1=q.x+q.w/2-11, y1=q.y-16;
+      await d.animate([{left:x0+"px",top:y0+"px",opacity:0},{opacity:1,offset:.2},{left:x1+"px",top:y1+"px",opacity:1,offset:.6},
+        {left:(x0+x1)/2+"px",top:(y0-10)+"px",opacity:0}],{duration:1000/SP,easing:"ease-in-out",fill:"both"}).finished;
+      d.remove(); };
+    tf.loop(run,async()=>{
+      const m=k++%3;
+      if(m===0){
+        card.style.opacity="1"; tf.paint(s1,R); tf.clear(s2);
+        cap.textContent="빨강 칸에 빨강은 못 놓는다";
+        tf.lift(card); await tf.wait(450/SP); if(!ok()) return false;
+        tf.pop(fig,s1,"✕ 겹침",true);
+        const r1=refuse(card,s1,R); tf.shake(s1); await r1; if(!ok()) return false;
+      } else {
+        card.style.opacity="0";
+        if(m===1){ tf.paint(s1,R|Y); tf.paint(s2,R); cap.textContent="주황에는 빨강이 들어 있어 빨강 칸과 합칠 수 없다"; }
+        else     { tf.paint(s1,R|Y); tf.paint(s2,Y|B); cap.textContent="혼합색끼리도 합칠 수 없다"; }
+        await tf.tap(fig,s1,SP); if(!ok()) return false;
+        await tf.tap(fig,s2,SP); if(!ok()) return false;
+        tf.pop(fig,s2,"✕ 겹침",true); await Promise.all([tf.shake(s1),tf.shake(s2)]); if(!ok()) return false;
+      }
+    },1300/SP);
+  },
+  // 색은 자동으로 쓰인다 — 색이 없으면 6, 맞는 색이 있으면 자동으로 소비하고 9
+  consume(fig){
+    fig.classList.add("flat");
+    const card=makeCardEl(DEF.aR); card.classList.add("st");
+    fig.innerHTML=`<div class="crow"><div class="ccard"></div><div class="cases">
+      <div class="case"><span class="slot empty sm"></span><span class="op">→</span><b>6</b><span>피해</span></div>
+      <div class="case"><span class="slot sm eat" style="background:${pigment(R)}"></span><span class="op">→</span><b class="up">9</b><span>피해 · 빨강 자동 소비</span></div>
+    </div></div><div class="cap">안료접시에 빨강이 없을 때 / 있을 때</div>`;
+    fig.querySelector(".ccard").appendChild(card);
+  },
+  // 색상 카드는 손에 남는다 — 턴이 끝나면 색상 카드만 남고 나머지는 버린 덱으로
+  keep(fig,run){
+    const keys=["cR","aR","dR"], cards=keys.map((k,i)=>{ const c=makeCardEl(DEF[k]); c.classList.add("mini"); c.style.left=(22+i*70)+"px"; fig.appendChild(c); return c; });
+    const pile=el("div","tpile"); pile.innerHTML=`<b>0</b>버린 덱`; fig.appendChild(pile);
+    const cap=tf.cap(fig), ok=()=>run===tutFigRun;
+    tf.loop(run,async()=>{
+      cards.forEach(c=>{ c.style.opacity="1"; }); pile.querySelector("b").textContent="0";
+      cap.textContent="턴 종료"; await tf.wait(700); if(!ok()) return false;
+      let n=0;
+      for(const c of cards.slice(1)){
+        const p=tf.pos(fig,c), q=tf.pos(fig,pile);
+        await c.animate([{translate:"0 0",opacity:1},{translate:`${q.x+q.w/2-p.x-p.w/2}px ${q.y+q.h/2-p.y-p.h/2}px`,opacity:0,scale:.4}],
+          {duration:420,easing:"ease-in"}).finished; if(!ok()) return false;
+        c.style.opacity="0"; pile.querySelector("b").textContent=++n;
+        pile.animate([{scale:1},{scale:1.12},{scale:1}],{duration:200});
+      }
+      cap.textContent="색상 카드만 손에 남는다";
+      cards[0].animate([{translate:"0 0"},{translate:"0 -8px"},{translate:"0 0"}],{duration:600});
+    },1800);
+  },
+  // 악귀의 색 저항 — 빨간 악귀에 빨강 → 주황 → 파랑 공격을 차례로 대 본다
+  resist(fig,run){
+    fig.innerHTML=`<div class="tfoe" style="left:50%;transform:translateX(-50%);top:30px;width:170px;text-align:center">
+      <div class="nm" style="justify-content:center"><span class="dot" style="background:${pigment(R)}"></span>붉은 악귀</div>
+      <div class="rhit"></div></div><div class="cap"></div>`;
+    const hit=fig.querySelector(".rhit"), cap=fig.querySelector(".cap");
+    const seq=[[R,"−30%","var(--hp)","빨강 공격 — 자기 색이라 30% 덜 들어간다"],[R|Y,"−10%","var(--nrg)","주황 공격 — 빨강이 섞여 10% 덜 들어간다"],[B,"그대로","var(--ink)","파랑 공격 — 그대로 들어간다"]];
+    let k=0;
+    tf.loop(run,async()=>{ const [c,tx,col,c2]=seq[k++%3];
+      hit.innerHTML=`<span class="dot" style="background:${pigment(c)};width:14px;height:14px"></span> <span style="color:${col}">${tx}</span>`; cap.textContent=c2;
+      hit.animate([{opacity:0,transform:"translateY(8px)"},{opacity:1,transform:"translateY(0)"}],{duration:300}); },1600);
+  },
+  // 색이 있어야 쓸 수 있다 — 흐리던 목장도가 주황 칸이 생기자 밝아진다
+  needcolor(fig,run){
+    const [s1,s2]=tf.pal(fig,2,"left:24px;right:auto");
+    const card=makeCardEl(DEF.sO); card.classList.add("dim"); card.style.left="auto"; card.style.right="22px"; fig.appendChild(card);
+    const cap=tf.cap(fig), ok=()=>run===tutFigRun;
+    tf.loop(run,async()=>{
+      tf.paint(s1,R); tf.paint(s2,Y); card.classList.add("dim"); card.classList.remove("lit"); cap.textContent="주황 칸이 없어 목장도를 못 쓴다";
+      await tf.wait(800); if(!ok()) return false;
+      await tf.tap(fig,s1); if(!ok()) return false;
+      await tf.tap(fig,s2); if(!ok()) return false;
+      const f=tf.fly(fig,s1,s2,R,40); tf.clear(s1); await f; if(!ok()) return false;
+      await tf.bloom(s2,R|Y); if(!ok()) return false; tf.paint(s2,R|Y);
+      card.classList.remove("dim"); card.classList.add("lit"); cap.textContent="주황을 만들면 쓸 수 있다";
+    },1800);
+  },
+  // 검정 칸 — 칸을 누르고 검정 칸을 누르면 버려지고 숫자 +1
+  black(fig,run){
+    const [s1,s2,s3]=tf.pal(fig,3,"left:50%;right:auto;transform:translateX(-50%)"), cap=tf.cap(fig), ok=()=>run===tutFigRun;
+    tf.loop(run,async()=>{
+      tf.paint(s1,R|Y); tf.clear(s2); tf.black(s3,2); cap.textContent="버릴 칸을 누르고 → 검정 칸을 누른다";
+      await tf.tap(fig,s1); if(!ok()) return false;
+      await tf.tap(fig,s3); if(!ok()) return false;
+      const f=tf.fly(fig,s1,s3,R|Y,40); tf.clear(s1); await f; if(!ok()) return false;
+      tf.black(s3,3); tf.pop(fig,s3,"+1",true); tf.shake(s3);
+      cap.textContent="칸이 비고, 검정 칸 숫자 +1";
+    },2000);
+  },
+  // 투명화 (S3) — 처음 맞으면 투명화 표시가 사라지며 방어도 +6
+  shell(fig,run){
+    fig.innerHTML=`<div class="tfoe" style="left:50%;transform:translateX(-50%);top:34px;width:180px">
+      <div class="nm"><span class="dot" style="background:${pigment(B)}"></span>푸른 역귀</div><span class="pip2">투명화</span><span class="blkv"></span></div><div class="cap"></div>`;
+    const foe=fig.querySelector(".tfoe"), pip=fig.querySelector(".pip2"), bv=fig.querySelector(".blkv"), cap=fig.querySelector(".cap"), ok=()=>run===tutFigRun;
+    tf.loop(run,async()=>{
+      pip.style.visibility="visible"; bv.textContent=""; cap.textContent="투명화가 남아 있는 악귀";
+      await tf.wait(1000); if(!ok()) return false;
+      foe.animate([{filter:"brightness(1)"},{filter:"brightness(2.2)"},{filter:"brightness(1)"}],{duration:300}); tf.pop(fig,foe,"−9 피해",true);
+      await tf.wait(700); if(!ok()) return false;
+      foe.animate([{opacity:1},{opacity:.45},{opacity:1}],{duration:600}); pip.style.visibility="hidden"; bv.textContent="🛡 6"; tf.pop(fig,bv,"방어도 +6","blk");
+      cap.textContent="처음 맞으면 투명해져 방어도를 얻는다 (최대 6). 한 번뿐"; await tf.wait(1800);
+    },1000);
+  },
+  // 꾀어내기 (W1-c3) — 왼쪽: 덱의 노랑이 끌려가 사라진다 · 오른쪽: 손패·안료접시의 노랑이 하나씩 나와 흔들릴 뿐 가져가지 못한다
+  steal(fig,run){
+    fig.classList.add("tall");
+    const mcY=`<span class="mcard"><span class="dot" style="background:${pigment(Y)}"></span></span>`;
+    const slY=`<span class="slot sm pale" style="background:${pigment(Y)};border-color:${pigment(Y)}"></span>`;
+    fig.innerHTML=`<div class="stl"><span class="pipbig">꾀어내기 · <span class="dot" style="background:${pigment(Y)}"></span> 노랑</span></div>
+      <div class="half L"><div class="ht">덱에 노랑이 있으면</div><div class="hs">뽑을 덱 · 버린 덱</div><div class="deck"></div><div class="res"></div></div>
+      <div class="half Rt"><div class="ht">손패나 안료접시에 있으면</div><div class="hs">이미 손에 쥐었거나 놓아 둔 노랑</div>
+        <div class="safe"><div class="it ih">${mcY}<span>손패</span></div><div class="it ip">${slY}<span>안료접시</span></div></div><div class="res"></div></div>`;
+    const pip=fig.querySelector(".pipbig"), deck=fig.querySelector(".deck"), ok=()=>run===tutFigRun;
+    const [hl,hr]=fig.querySelectorAll(".half"), [rl,rr]=fig.querySelectorAll(".res");
+    const ih=hr.querySelector(".ih"), ip=hr.querySelector(".ip"), item=e=>e.querySelector(".mcard,.slot");
+    const focus=side=>{ hl.classList.toggle("dimh",side!=="L"); hr.classList.toggle("dimh",side!=="R"); };
+    const glow=()=>pip.animate([{boxShadow:"0 0 0 0 rgba(217,164,65,0)"},{boxShadow:"0 0 0 5px rgba(217,164,65,.4)"},{boxShadow:"0 0 0 0 rgba(217,164,65,0)"}],{duration:800});
+    const say2=txt=>{ rr.innerHTML=txt; rr.animate([{opacity:0},{opacity:1}],{duration:250}); };
+    const appear=e=>e.animate([{opacity:0,translate:"0 6px"},{opacity:1,translate:"0 0"}],{duration:300,fill:"forwards"}).finished;
+    tf.loop(run,async()=>{
+      rl.innerHTML=""; rr.innerHTML="";
+      [ih,ip].forEach(e=>{ e.getAnimations().forEach(a=>a.cancel()); e.style.opacity="0"; });
+      deck.innerHTML=[R,Y,B].map(c=>`<span class="mcard"><span class="dot" style="background:${pigment(c)}"></span></span>`).join("");
+      focus("L"); glow(); await tf.wait(700); if(!ok()) return false;
+      const yc=deck.children[1], p=tf.pos(fig,yc), q=tf.pos(fig,pip);
+      await yc.animate([{translate:"0 0",opacity:1},{translate:"0 -10px",opacity:1,offset:.25},
+        {translate:`${q.x+q.w/2-p.x-p.w/2}px ${q.y+q.h-p.y}px`,opacity:0,scale:.45}],{duration:900,easing:"ease-in"}).finished; if(!ok()) return false;
+      yc.style.visibility="hidden"; rl.innerHTML=`<span class="no">✕</span> 노랑 1장이 이 전투 동안 사라진다`;
+      rl.animate([{opacity:0},{opacity:1}],{duration:250});
+      await tf.wait(1500); if(!ok()) return false;
+      focus("R");
+      await appear(ih); glow(); await tf.wait(500); if(!ok()) return false;
+      await tf.shake(item(ih)); say2(`<span class="yes">○</span> 손패의 노랑은 가져가지 못한다`); await tf.wait(1300); if(!ok()) return false;
+      await appear(ip); glow(); await tf.wait(500); if(!ok()) return false;
+      await tf.shake(item(ip)); say2(`<span class="yes">○</span> 안료접시의 노랑도 가져가지 못한다`); await tf.wait(1900);
+    },400);
+  },
+};
+
+function tut(id){
+  if(!TUT[id]) return;                 // 다른 안내에 합쳐 없어진 id
+  if(!S||!RUN||RUN.seen[id]) return;   // 런 전체에서 한 번만
+  RUN.seen[id]=true; tutQ.push(id);
+  setTimeout(pumpTut,0);   // 같은 동작의 연출(fxPaint)이 먼저 시작되도록 한 박자 뒤에 연다
+}
+let tutPages=[], tutI=0;
+function tutShow(i){
+  tutI=Math.max(0,Math.min(tutPages.length-1,i));
+  const id=tutPages[tutI], [h,p]=TUT[id], n=tutPages.length;
+  document.getElementById("tuth").textContent=h;
+  document.getElementById("tutp").innerHTML=p;
+  document.getElementById("tutn").textContent = n>1 ? `${tutI+1} / ${n}` : "";
+  const fig=document.getElementById("tutfig"); fig.innerHTML=""; fig.className="tutfig"; tutFigRun++;
+  fig.hidden=!TUT_FIG[id];
+  if(TUT_FIG[id]) TUT_FIG[id](fig, tutFigRun);
+  const prev=document.getElementById("tutprev"), ok=document.getElementById("tutok");
+  prev.hidden = n<2; prev.disabled = tutI===0;
+  ok.textContent = tutI<n-1 ? "다음 ▶" : "확인";
+  const dots=document.getElementById("tutdots");
+  dots.innerHTML = n>1 ? tutPages.map((_,j)=>`<i class="${j===tutI?"on":""}" data-j="${j}"></i>`).join("") : "";
+  dots.querySelectorAll("i").forEach(d=>d.onclick=()=>tutShow(+d.dataset.j));
+}
+function pumpTut(){
+  if(tutOpen||!tutQ.length) return;
+  // 물감 혼합 연출이 도는 중이면 끝난 뒤에 연다 — 첫 혼합 장면을 안내창이 가리지 않게
+  const wait=fxUntil-performance.now();
+  if(wait>0){ setTimeout(pumpTut,wait); return; }
+  // 쌓인 안내를 한 창에 모은다 — 순서는 TUT_ORDER
+  tutPages=tutQ.splice(0).sort((a,b)=>TUT_ORDER.indexOf(a)-TUT_ORDER.indexOf(b));
+  tutOpen=true; S.paused=true;
+  document.getElementById("tutover").hidden=false;
+  // 크기 고정 — 모든 장을 한 번씩 그려 가장 큰 높이로 맞춘다 (넘겨도 창이 들썩이지 않게)
+  const box=document.getElementById("tutbox"); box.style.height="";
+  let mh=0; tutPages.forEach((_,j)=>{ tutShow(j); mh=Math.max(mh,box.offsetHeight); });
+  box.style.height=mh+"px";
+  tutShow(0);
+  render();
+}
+function tutNext(){ if(tutI<tutPages.length-1) tutShow(tutI+1); else closeTut(); }
+function closeTut(){
+  if(!tutOpen) return;
+  tutOpen=false; tutFigRun++;   // 그림 시연 반복을 멈춘다
+  document.getElementById("tutover").hidden=true;
+  // 다 읽은 안내는 화면에 쌓아 두지 않는다 — 다시 볼 때는 ☰ 메뉴 › 튜토리얼 다시 보기
+  if(tutQ.length){ pumpTut(); return; }
+  S.paused=false; render();
+  if(resumeFn){ const f=resumeFn; resumeFn=null; f(); }
+}
+/* 일시정지를 존중하는 타이머 */
+function later(fn,ms){
+  setTimeout(()=>{ if(S.paused){ resumeFn=fn; return; } fn(); },ms);
+}
+/* 배너는 쌓인다. 각자 닫기 버튼으로만 사라진다. */
+function banner(title,html,isNew){
+  const box=document.getElementById("tips");
+  const t=document.createElement("div");
+  t.className="tip"+(isNew?" isnew":"");
+  t.innerHTML=(isNew?'<span class="newtag">NEW</span>':'')+
+    (title?`<span class="tt">${title}</span>`:'')+html+
+    '<button class="x" aria-label="닫기">✕</button>';
+  t.querySelector(".x").onclick=()=>t.remove();
+  box.appendChild(t);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   적 표 · 스테이지 표 — 여기부터 STAGES 끝까지가 기획 영역입니다.
+
+   🚨 아래 적 2종(말벌·거미)과 모든 수치는 전부 [임시]입니다.
+      맵이 도는지 보려고 제가 채운 값이라 이름·체력·행동 전부 갈아엎으세요.
+
+   스테이지 하나
+     type   "battle" · "camp" · "shop"      foes  등장할 적 키 목록(같은 적 여러 마리 가능)
+     nm/sub 맵에 뜨는 이름·부제            gold  전투 보상 엽전
+     intro  전투 시작 로그                 boss  true면 보스 표시
+     first  이 전투에서만 특정 적에게 1턴 강제 행동을 건다 — {적키:"행동키"}.
+            튜토리얼로 보여줘야 하는 행동을 첫 등장 때만 확정으로 띄울 때 쓴다.
+            적 표의 first 는 그 적이 어디서든 늘 하는 것이고, 이쪽은 이 전투 한정이다
+
+   적 하나                       행동 하나(acts 의 원소)
+     n      이름                   k     행동 키(중복 금지)
+     hp     체력                   nm    화면에 뜨는 행동 이름
+     col    색 (저항 판정용)        w     고를 가중치
+     shell  투명화 패시브 여부
+     first  1턴에 반드시 할 행동 키   dmg   피해 · hits 타격 횟수
+     repeat true면 같은 행동이         str   자기 힘 +N (누적된다)
+            연달아 나와도 막지 않음    blk   자기 방어도 +N
+                                    heal  자기 체력 회복
+                                    taint 안료접시 N칸을 검정으로 오염 — 「오염」 패턴군
+                                    pick  오염의 갈래를 정한다
+                                          없으면 랜덤 오염 — 무작위 1칸
+                                          "most" 면 확정 오염 — 성분이 가장 많은 칸
+                                          어느 쪽이든 이미 잠긴 검정 칸은 후보에서 빠진다
+                                    steal 그 성분의 색상 카드를 덱·버린 덱에서 소멸.
+                                          안료접시에 놓인 색은 건드리지 않는다.
+                                          소멸시킬 카드가 없으면 이 행동은 후보에서 빠진다
+   ══════════════════════════════════════════════════════════════ */
+const FOE={
+  snailR:{n:"붉은 역귀",hp:10,col:R,shell:true,acts:[
+    {k:"spit",nm:"홀림",w:75,dmg:7},
+    {k:"grow",nm:"성장",  w:25,str:3}]},
+  snailB:{n:"푸른 역귀",hp:14,col:B,shell:true,acts:[
+    {k:"spit",nm:"홀림",w:75,dmg:7},
+    {k:"taintRand",nm:"전염",w:25,taint:1}]},
+
+  /* [임시] 노란 꿀벌 — 방어하지 않는다. 같은 행동이 이어져도 막지 않는다(repeat) */
+  bee:{n:"노란 창귀",hp:16,col:Y,shell:false,repeat:true,acts:[
+    {k:"sting",  nm:"연속 침",w:75,dmg:5,hits:2},
+    {k:"harvest",nm:"꾀어내기",w:25,steal:Y}]},
+
+  /* [임시] 검은 거미 — 보스. 모든 색에 10% 저항하고 성분이 많은 칸을 노린다 */
+  spider:{n:"검은 어둑시니",hp:80,col:7,shell:true,first:"taintFix",acts:[
+    {k:"bite",  nm:"물기",  w:45,dmg:20},
+    {k:"taintFix",nm:"감염",w:30,taint:1,pick:"most"},
+    {k:"harden",nm:"굳히기",w:25,blk:10,str:2}]}
+};
+
+/* 맵 — 왼쪽에서 오른쪽으로 한 줄. [임시] 편성입니다 */
+const SHELL_MAX=6;        // 투명화로 얻는 방어도 상한 — 해인님 결정 2026-10-06
+const REST_PCT=0.30;      // 휴식으로 회복하는 최대 체력 비율 [임시]
+const COIN='<svg class="coin" viewBox="0 0 26 26" aria-label="엽전"><path fill-rule="evenodd" d="M13 1.5a11.5 11.5 0 1 0 0 23a11.5 11.5 0 1 0 0-23zM9.5 9.5h7v7h-7z" fill="#B8923A" stroke="#7A5E1E" stroke-width="1.5"/><circle cx="13" cy="13" r="8.5" fill="none" stroke="#7A5E1E" stroke-width="1"/></svg>';   // 엽전 아이콘 — 화면의 "엽전" 글자 자리
+const START_GOLD=70;      // 시작 엽전 [임시]
+const STAGES=[
+  {type:"battle",nm:"적 1",sub:"붉은 역귀·푸른 역귀",foes:["snailR","snailB"], gold:14,
+   first:{snailB:"taintRand"},  // 튜토리얼 — 검정 오염을 첫 전투에서 반드시 한 번 보여준다
+   intro:"붉은 역귀와 푸른 역귀가 모습을 감출 틈을 노린다."},
+  {type:"camp",  nm:"모닥불",sub:"휴식 또는 재련"},
+  {type:"battle",nm:"적 2",sub:"노란 창귀 둘",foes:["bee","bee"], gold:16,
+   intro:"노란 창귀 둘이 덮쳐 온다. 투명화하지 않는다."},
+  {type:"shop",  nm:"도깨비 상점",sub:"카드 구매·제거"},
+  {type:"battle",nm:"적 3",sub:"푸른 역귀 셋",foes:["snailB","snailB","snailB"], gold:18,
+   intro:"푸른 역귀 셋이 다가온다."},
+  {type:"camp",  nm:"모닥불",sub:"휴식 또는 재련"},
+  {type:"battle",nm:"보스",sub:"검은 어둑시니",foes:["spider"], boss:true,
+   intro:"검은 어둑시니가 안료접시를 노려본다."}
+];
+/* ══════════════ 기획 영역 끝 ══════════════ */
+
+/* ---------- run / battle state ---------- */
+let S, RUN, uid=0;
+function newRun(){
+  // upg 는 deck 과 같은 길이로 따라다닌다 — 재련으로 건 영구 강화는 런 전체에 남는다
+  RUN={deck:[...START], upg:START.map(()=>false),
+       hp:80, maxHp:80, battle:1, gold:START_GOLD, seen:{}, node:0, cleared:0, rewardFor:-1};
+  // RUN 바깥에 사는 상태도 같이 비운다 — 안 그러면 지난 런의 상점 재고·구매 흔적이 남는다
+  SHOPWARE=null; REW=[]; pickRetain=null;
+  showMap();
+}
+function deckAdd(k){ RUN.deck.push(k); RUN.upg.push(false); }
+function deckRemoveAt(i){ RUN.deck.splice(i,1); RUN.upg.splice(i,1); }
+function startBattle(){
+  const st=STAGES[RUN.node];
+  // 같은 적이 여럿이면 이름에 번호를 붙인다 — 로그와 강조가 서로 구분돼야 한다
+  const dup={}; st.foes.forEach(id=>dup[id]=(dup[id]||0)+1);
+  const seen={};
+  const mk=(id,i)=>{ const D=FOE[id];
+    seen[id]=(seen[id]||0)+1;
+    const nm = dup[id]>1 ? `${D.n} ${seen[id]}` : D.n;
+    return {id,key:id+"#"+i,n:nm,hp:D.hp,max:D.hp,blk:0,col:D.col,str:0,vuln:0,weak:0,
+            burn:0,burnD:0,shell:!!D.shell,hist:[],intent:null,
+            // 1턴 강제 행동 — 적 표에 있으면 늘, 스테이지에 있으면 이 전투에서만
+            first: (st.first&&st.first[id]) || D.first || null}; };
+  S={hp:RUN.hp,maxHp:RUN.maxHp,blk:0,e:3,maxE:3,turn:1,over:false,busy:false,
+     str:0,exile:[],noResist:false,wild:false,retainEach:0,retainSrc:"",
+     draw:shuffle(RUN.deck.map((k,i)=>({k,uid:uid++,upg:RUN.upg[i]?{scope:"run"}:null}))),
+     hand:[],disc:[],
+     pal:[slot(),slot(),slot(),slot()],
+     sel:null,mergeA:null,paused:false,acting:null,
+     foes:st.foes.map(mk),
+     log:[]};
+  tutQ=[]; tutOpen=false; resumeFn=null;
+  document.getElementById("tutover").hidden=true;
+  document.getElementById("pileover").hidden=true;
+  document.getElementById("pickover").hidden=true; pickRetain=null; pickDiscard=null;
+  document.getElementById("rewover").hidden=true;
+  document.getElementById("over").hidden=true;
+  document.getElementById("tips").innerHTML="";
+  document.getElementById("mapover").hidden=true;
+  document.getElementById("shopover").hidden=true;
+  setPhase("내 턴",false);
+  say(`<b>${st.nm}</b> — ${st.intro}`,"hi");
+  startTurn(true);
+  // 전투 시작 안내 — 기본 일곱 가지를 한 창에서 넘겨 읽는다 (순서는 TUT_ORDER)
+  ["block","place","consume","keep","merge","overlap","resist"].forEach(tut);
+  // 훔치는 적이 있으면 맞기 전에 미리 알려준다 — 안료접시로 지킬 수 있어야 전략이 된다
+  if(S.foes.some(f=>FOE[f.id].acts.some(a=>a.steal))) tut("steal");
+}
+const slot=()=>({comp:0,cards:[],lock:0});
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[a[i],a[j]]=[a[j],a[i]];}return a;}
+function say(t,c){S.log.push({t,c:c||""});if(S.log.length>60)S.log.shift();}
+
+/* ---------- turn ---------- */
+function startTurn(first){
+  S.blk=0; S.e=S.maxE;
+  // 검정 잠김 감소 — 내 턴이 시작될 때 (적 턴이 이미 1턴을 소모했다)
+  S.pal.forEach((s,i)=>{
+    if(s.lock>0){
+      s.lock--;
+      if(s.lock<=0){
+        const back=s.cards.length;
+        s.cards.forEach(c=>S.disc.push(c));
+        S.pal[i]=slot();
+        if(back) say(`${i+1}번 칸의 검정이 풀려 색상 카드 ${back}장이 버린 덱으로.`,"hi");
+        else say(`${i+1}번 칸의 검정이 풀렸습니다.`,"hi");
+      }
+    }
+  });
+  const want=Math.min(DRAW,HAND_MAX-S.hand.length);
+  let got=0;
+  for(let i=0;i<want;i++){ if(!drawOne())break; got++; }
+  if(got<want) say(`손패가 가득 차 ${want-got}장을 뽑지 못했습니다.`,"bad");
+  S.foes.forEach(f=>{ if(f.hp>0) f.intent=pickIntent(f); });
+  if(first) say("의도를 확인하고 색을 배치하세요.","");
+  render();
+  // 혼합색 스킬을 쥐고 있는데 쓸 칸이 없으면 합치는 법을 알려준다
+  if(!first && S.hand.some(c=>DEF[c.k].type==="skill"&&frontSlots(DEF[c.k].need)===null)) tut("merge");
+}
+function drawOne(){
+  if(S.hand.length>=HAND_MAX) return false;
+  if(!S.draw.length){
+    if(!S.disc.length) return false;
+    S.draw=shuffle(S.disc); S.disc=[];
+    say("버린 덱을 섞어 뽑을 덱으로.","");
+  }
+  const c=S.draw.pop();
+  c.fxDeal=-1;                            // 화면에 그릴 때 뽑을 덱에서 날아 들어온다 (fxDeal)
+  S.hand.push(c);
+  // 뽑을 때 복제 — 실제로 뽑힌 장만 발동한다 (복제본은 그 자리에서 또 복제하지 않는다)
+  if(DEF[c.k].copyOnDraw && S.hand.length<HAND_MAX){
+    // 동일한 카드로 갈라지는 것이므로 강화 상태도 그대로 물려준다
+    S.hand.push({k:c.k,uid:uid++,upg:c.upg?{scope:c.upg.scope}:null,fxDeal:-1});
+    const d=defOf(c);
+    say(`<b>${d.n}</b>이(가) 갈라져 한 장이 더 생겼습니다.`,"hi");
+  }
+  return true;
+}
+/* 훔칠 수 있는 카드 — 덱과 버린 덱만 본다. 안료접시에 놓인 색은 이미 손을 떠났다 */
+function stealTargets(comp){
+  const hit=c=>{ const d=DEF[c.k]; return d.type==="color"&&d.comp===comp; };
+  return [...S.draw.filter(hit),...S.disc.filter(hit)];
+}
+/* 그 행동을 지금 쓸 수 있는가 — 조건이 붙은 행동만 걸러진다 */
+function actOK(a){
+  if(a.steal) return stealTargets(a.steal).length>0;
+  return true;
+}
+/* 의도 고르기 — 가중치로 뽑는다. repeat 이 아니면 같은 행동이 세 번 연속되지 않게 한다 */
+function pickIntent(f){
+  const D=FOE[f.id];
+  const acts=D.acts.filter(actOK);
+  if(!acts.length) return D.acts[0].k;
+  if(f.first&&S.turn===1&&acts.some(a=>a.k===f.first)) return f.first;
+  let pool=acts;
+  if(!D.repeat){
+    const h=f.hist, stuck=(h.length>=2&&h[h.length-1]===h[h.length-2])?h[h.length-1]:null;
+    const bag=acts.filter(a=>a.k!==stuck);
+    if(bag.length) pool=bag;
+  }
+  let tot=pool.reduce((s,a)=>s+a.w,0), r=Math.random()*tot;
+  for(const a of pool){ if(r<a.w) return a.k; r-=a.w; }
+  return pool[pool.length-1].k;
+}
+function foeAct(f){
+  const acts=FOE[f.id].acts;
+  return acts.find(a=>a.k===f.intent)||acts[0];
+}
+/* 적 카드 위에 뜨는 의도 문구 — 표에 적힌 것만 보고 만든다 */
+function intentText(f){
+  const a=foeAct(f), p=[];
+  if(a.dmg){
+    let d=a.dmg+f.str;
+    if(f.weak>0) d=Math.floor(d*0.75);
+    p.push(`${d} 피해`+(a.hits>1?` ×${a.hits}회`:""));
+  }
+  if(a.str)   p.push(`힘 +${a.str}`);
+  if(a.blk)   p.push(`방어도 ${a.blk}`);
+  if(a.heal)  p.push(`체력 ${a.heal} 회복`);
+  // 이름이 이미 랜덤/확정을 말한다. 확정 쪽만 어느 칸을 노리는지 덧붙인다
+  if(a.taint) p.push(`안료접시 ${a.taint}칸 검정`+(a.pick==="most"?" — 가장 섞인 칸":""));
+  if(a.steal) p.push(`덱의 <b>${CNAME[a.steal]}</b> 1장 소멸`);
+  return `<b>${a.nm}</b> ${p.join(" · ")}`;
+}
+/* 적이 칸을 검정으로 오염시킨다 — 대상 고르는 규칙은 적마다 다르다 (design/DESIGN_BRANCH_B.md) */
+function taintSlots(f,n,pick){
+  for(let c=0;c<n;c++){
+    const open=S.pal.map((s,i)=>i).filter(i=>S.pal[i].lock===0);
+    if(!open.length){ say(`${f.n}의 오염이 빗나갔습니다. 안료접시가 전부 잠겨 있습니다.`,""); return; }
+    // open 은 lock===0 인 칸뿐이라 이미 검정이 된 칸은 후보에서 빠진다 —
+    // 같은 칸에 검정을 겹쳐 쌓아 헛수고가 되는 일이 없다
+    let t;
+    if(pick==="most"){                     // 강한 적 — 성분이 가장 많은 칸(혼합 남발을 처벌)
+      t=open.reduce((a,b)=>bits(S.pal[b].comp)>bits(S.pal[a].comp)?b:a);
+    } else {                               // 일반 — 무작위 1칸
+      t=open[(Math.random()*open.length)|0];
+    }
+    const s=S.pal[t], held=s.cards.length;
+    fxTaint(t, s.comp);                    // 연출 — 원래 색에서 먹이 스며 나온다
+    // 적이 만든 검정 — 원래 있던 색상 카드는 칸에 갇혔다가, 풀리면 버린 덱으로 돌아온다 (2026-10-06 변경, 예전엔 소멸)
+    s.comp=7; s.lock=3;
+    say(`${f.n}이(가) ${t+1}번 칸을 검정으로 오염시켰습니다. 3턴 잠김.`,"bad");
+    if(held) say(`그 칸의 색상 카드 ${held}장이 갇혔습니다. 풀리면 버린 덱으로 돌아옵니다.`,"bad");
+    tut("black");
+  }
+}
+function endTurn(){
+  if(S.over||S.busy||S.paused) return;
+  S.sel=null; S.mergeA=null;
+  // 복주머니류 — 전투 내내 매 턴 끝에 보존할 카드를 먼저 고른다
+  if(S.retainEach>0&&retainCands().length){
+    openPick(S.retainEach,S.retainSrc,finishEndTurn);
+    return;
+  }
+  finishEndTurn();
+}
+function finishEndTurn(){
+  tut("keep");  // 첫 턴 종료 때 무조건 — 손에 색이 없어도 규칙은 미리 알려준다
+  // 색상 카드는 남고, 보존(hold)이 걸린 카드도 남는다. 보존은 한 턴만 간다
+  const keep=[],go=[];
+  let held=0,vol=0;
+  S.hand.forEach(c=>{
+    if(c.vol){ S.exile.push(c); vol++; return; }     // 휘발성 — 하양이 만든 색은 턴 끝에 소멸
+    if(staysInHand(DEF[c.k])){ keep.push(c); return; }
+    if(c.hold){ c.hold=false; held++; keep.push(c); return; }
+    go.push(c);
+  });
+  { const hw=document.getElementById("hand");   // 연출 — 다시 그리기 전에 버릴 카드 모습을 떠 둔다
+    fxDiscard(go.map(c=>hw.children[S.hand.indexOf(c)]), 0); }
+  S.hand=keep; go.forEach(c=>S.disc.push(c));
+  if(S.wild){ S.wild=false; say("눈이 다시 뜨여 안료접시의 색이 돌아왔습니다.",""); }
+  // 이번 턴짜리 강화는 여기서 풀린다. battle 은 전투가 끝날 때 S 가 통째로 새로 만들어지며 사라진다
+  let unup=0;
+  [S.hand,S.draw,S.disc].forEach(pile=>pile.forEach(c=>{
+    if(c.upg&&c.upg.scope==="turn"){ c.upg=null; unup++; }
+  }));
+  if(unup) say(`이번 턴짜리 <b>강화</b> ${unup}장이 풀렸습니다.`,"");
+  if(go.length||vol) say(`${go.length}장을 버렸습니다. 색상 카드 ${keep.length-held}장은 손에 남습니다.`
+                    +(held?` <b>보존</b>한 ${held}장도 남습니다.`:"")
+                    +(vol?` 하양이 만든 ${vol}장은 <b>소멸</b>했습니다.`:""),"");
+  render();
+  foeTurn();
+}
+/* 적 턴 연출 타이밍 — 애니메이션 삽입 여유를 둔 값 */
+const T_LEAD  = 550;   // 적 턴 진입
+const T_FOCUS = 950;   // 강조 후 행동까지 (등장/모션 구간)
+const T_READ  = 1450;  // 행동 후 다음 적까지 (타격/반응 구간)
+
+function setPhase(t,enemy){
+  const p=document.getElementById("phase");
+  p.textContent=t; p.classList.toggle("enemy",!!enemy);
+}
+function foeTurn(){
+  S.busy=true; S.acting=null;
+  setPhase("적 턴",true);
+  const alive=S.foes.filter(f=>f.hp>0);
+  alive.forEach(f=>f.blk=0);
+  // 화상 — 적 턴이 시작될 때 지진다
+  alive.forEach(f=>{
+    if(f.burn>0&&f.hp>0){
+      f.hp-=f.burnD; f.burn--;
+      say(`${f.n}이(가) <b>화상</b>으로 ${f.burnD} 피해. 남은 ${f.burn}턴.`,"hi");
+      if(f.hp<=0){ f.hp=0; if(!f.dead){f.dead=true;say(`${f.n} 처치.`,"hi");} }
+    }
+  });
+  if(S.foes.every(f=>f.hp<=0)){ S.busy=false; return finish(true); }
+  render();
+  let i=0;
+  const next=()=>{
+    if(S.over){ S.acting=null; S.busy=false; render(); return; }
+    if(i>=alive.length){
+      S.acting=null;
+      S.foes.forEach(f=>{ if(f.vuln>0) f.vuln--; if(f.weak>0) f.weak--; });
+      S.turn++; S.busy=false;
+      setPhase("내 턴",false);
+      startTurn(false);
+      return;
+    }
+    const f=alive[i++];
+    if(f.hp<=0){ next(); return; }
+    S.acting=f.key; render();             // ① 차례가 온 적을 강조
+    later(()=>{
+      if(S.over){ S.busy=false; return; }
+      act(f); render();                    // ② 행동 실행 + 로그
+      later(next,T_READ);                  // ③ 결과를 읽는 시간
+    },T_FOCUS);
+  };
+  later(next,T_LEAD);
+}
+function act(f){
+  const a=foeAct(f);
+  f.hist.push(a.k); if(f.hist.length>4) f.hist.shift();
+  if(a.dmg){
+    const hits=a.hits||1;
+    for(let h=0;h<hits;h++){
+      if(S.over) return;
+      let dmg=a.dmg+f.str;
+      if(f.weak>0) dmg=Math.floor(dmg*0.75);     // 약화 — 주는 피해 25% 감소
+      hitPlayer(dmg,f.n,a.nm);
+    }
+  }
+  if(a.str){ f.str+=a.str; say(`${f.n}이(가) <b>힘 ${a.str}</b>을(를) 얻었습니다.`,"bad"); }
+  if(a.blk){ f.blk+=a.blk; say(`${f.n}이(가) 방어도 ${a.blk}을(를) 얻었습니다.`,"bad"); }
+  if(a.heal){
+    const b=f.hp; f.hp=Math.min(f.max,f.hp+a.heal);
+    say(`${f.n}이(가) 체력을 ${f.hp-b} 회복했습니다.`,"bad");
+  }
+  if(a.taint) taintSlots(f,a.taint,a.pick);
+  if(a.steal){
+    const pool=stealTargets(a.steal);
+    if(!pool.length){ say(`${f.n}이(가) 가져갈 ${CNAME[a.steal]} 카드를 찾지 못했습니다.`,""); return; }
+    const c=pool[(Math.random()*pool.length)|0];
+    const from=S.draw.indexOf(c)>=0?S.draw:S.disc;
+    from.splice(from.indexOf(c),1);
+    S.exile.push(c);
+    say(`${f.n}이(가) <b>${DEF[c.k].n}</b> 한 장을 가져가 <b>소멸</b>시켰습니다.`,"bad");
+  }
+}
+function hitPlayer(d,who,what){
+  const ab=Math.min(S.blk,d); S.blk-=ab;
+  const th=d-ab; S.hp-=th;
+  fxHurt(ab,th);             // 연출 — 붉은 번짐 + 내 체력 깜박임
+  say(`${who}의 ${what||"공격"} ${d} 피해`+(ab?` (방어도 ${ab} 흡수)`:"")+`. 체력 ${Math.max(0,S.hp)}.`,"bad");
+  if(S.hp<=0){S.hp=0;finish(false);}
+}
+
+/* ---------- damage ---------- */
+function resistOf(f,comp){
+  if(S.noResist) return 0;   // 색맹류 — 이 전투 동안 색 저항을 무시한다
+  if(!comp) return 0;
+  if(comp===f.col) return .30;
+  if(comp & f.col)  return .10;
+  return 0;
+}
+function calcDmg(base,f,comp){
+  let d=base*(1-resistOf(f,comp));
+  if(f.vuln>0) d*=1.5;
+  return Math.floor(d);
+}
+function resistNote(f,comp,base,shown,label){
+  const r=resistOf(f,comp);
+  if(r>0) say(`${f.n}은(는) <b>${label||CNAME[comp]}</b>에 저항합니다 — ${Math.round(r*100)}% 감소, ${base} → ${shown}`,"");
+}
+function dealTo(f,amt){
+  const ab=Math.min(f.blk,amt); f.blk-=ab;
+  const th=amt-ab; f.hp-=th;
+  fxHit(f,ab,th);            // 연출 — 피해 숫자 + 화면 흔들림 (화면을 다시 그린 뒤 재생)
+  return th;
+}
+
+/* ---------- playing ---------- */
+function foeEffect(d){ return !!(d.dmg||d.burnT||d.weak||d.vuln); }
+function needsTarget(d){
+  if(d.type==="atk") return true;
+  if(d.type==="skill") return !d.aoe&&!d.rand&&foeEffect(d);
+  return false;
+}
+function frontSlot(comp){ // 앞쪽부터 정확히 일치하는 칸
+  for(let i=0;i<4;i++) if(S.pal[i].lock===0&&S.pal[i].comp===comp) return i;
+  return -1;
+}
+/* need 는 성분 하나(3)로도, 여러 개([3,6] · [1,1])로도 쓸 수 있다 */
+function needList(need){ return Array.isArray(need)?need:[need]; }
+/* 요구 목록을 서로 다른 칸으로 전부 채운다. 하나라도 못 채우면 null.
+   칸은 성분이 정확히 일치해야만 쓰이므로, 앞쪽부터 집는 것으로 충분하다
+   (서로 다른 요구가 같은 칸을 두고 다툴 일이 없다) */
+function frontSlots(need){
+  const want=needList(need), used=[];
+  for(const comp of want){
+    let hit=-1;
+    for(let i=0;i<4;i++){
+      if(used.indexOf(i)>=0) continue;
+      // 심봉사류 — 이번 턴에는 색이 달라도 색이 든 칸이면 무엇이든 요구 하나를 채운다
+      if(S.pal[i].lock===0&&S.pal[i].comp!==0&&(S.wild||S.pal[i].comp===comp)){ hit=i; break; }
+    }
+    if(hit<0) return null;
+    used.push(hit);
+  }
+  return used;
+}
+/* 색 이름 나열 — 같은 색이 겹치면 "빨강 ×2" 로 묶는다 */
+function compLabel(comps){
+  const seen=[], cnt={};
+  comps.forEach(c=>{ if(cnt[c]===undefined){ cnt[c]=0; seen.push(c); } cnt[c]++; });
+  return seen.map(c=>CNAME[c]+(cnt[c]>1?` ×${cnt[c]}`:"")).join(" · ");
+}
+function needNames(need){ return compLabel(needList(need)); }
+/* 카드에 찍히는 색 점 — 요구색이 여럿이면 여러 개를 찍는다 */
+/* ---------- 강화 (기획서 §9) ---------- */
+/* 카드 정의의 upv 가 "강화 시 바뀌는 변수값"이다. 예: upv:{dmg:9}
+   강화 여부는 손패 카드 한 장 한 장(인스턴스)에 붙는다 — c.upg={scope}
+   (공격·방어 카드의 d.up 은 "색 소비 시 수치"라 이것과 다른 것이다)
+   upv 의 값은 숫자만이 아니라 true/false 도 된다 — 예: upv:{rand:false,aoe:true}
+   scope: "turn" 이번 턴 · "battle" 이번 전투 · "run" 영구(재련 노드, 아직 없음) */
+/* 설명문의 {필드} 를 실제 값으로 바꾼다 — 강화되면 강화된 값이 그대로 문장에 들어간다 */
+function fillTx(tx,d){
+  return (tx||"").replace(/\{(\w+)\}/g,(m,k)=>d[k]!==undefined&&d[k]!==null?d[k]:m);
+}
+/* 카드 문구 — 힘·대상의 색 저항·취약을 반영한 실제 피해로 숫자를 바꿔 쓴다 (슬더슬처럼)
+   target 이 없으면 힘만, 있으면 그 적에게 들어갈 값. 바뀐 숫자는 .mod up(파랑)/down(빨강) */
+function cardTx(c,target){
+  const d=defOf(c);
+  const vals={};
+  const mod=(key,comp)=>{ const o=d[key]; if(o==null) return; let v=o+S.str; if(target) v=calcDmg(v,target,comp); if(v!==o) vals[key]=v; };
+  if(S&&d.type==="atk"){ mod("dmg",0); mod("up",d.req); }
+  else if(S&&d.type==="skill"&&d.dmg){ let comp=0; const si=frontSlots(d.need); if(si) si.forEach(i=>{ comp|=S.pal[i].comp; }); mod("dmg",comp); }
+  return (d.tx||"").replace(/\{(\w+)\}/g,(m,k)=>{
+    const o=d[k]; if(o===undefined||o===null) return m;
+    const v=vals[k]; if(v===undefined) return o;
+    return `<span class="mod ${v>o?"up":"down"}">${v}</span>`;
+  });
+}
+function defOf(c){
+  const d=DEF[c.k];
+  const up=!!(c.upg&&d.upv);
+  const m=up?Object.assign({},d,d.upv):d;
+  // 강화하면 문장 구조까지 바뀌는 카드는 txUp 을 따로 쓴다 (예: 무작위 → 모든 적)
+  const tx=(up&&d.txUp)?d.txUp:d.tx;
+  return Object.assign({},m,{n:up?d.n+"+":d.n,tx:tx});
+}
+/* 강화할 수 있는가 — 카드당 1회만. 효과를 고르기 전의 하양은 강화할 수 없다 */
+function canUpgrade(c){
+  const d=DEF[c.k];
+  return !!d.upv && !c.upg && d.type!=="white";
+}
+/* 턴이 끝나도 손에 남는 카드 — 색상 카드와 하양.
+   하양은 안료접시에 놓는 카드가 아니라 효과를 고르는 카드지만, 등급상 컬러 카드다(기획서 §8) */
+function staysInHand(d){ return d.type==="color"||d.type.slice(0,5)==="white"; }
+function needComps(d){
+  if(d.type&&d.type.slice(0,5)==="white") return ["W"];   // 하양은 성분이 없다
+  if(d.type==="color") return [d.comp];
+  if(d.need!==undefined) return needList(d.need);
+  return [d.req||0];
+}
+function dotsHTML(d){
+  return needComps(d).map(c=>`<span class="dot" style="background:${pigment(c)}"></span>`).join("");
+}
+function canPlay(c){
+  const d=defOf(c);
+  if(d.e>S.e) return false;
+  if(d.type==="color") return S.pal.some((s,i)=>placeOK(i,d.comp));
+  if(d.type==="skill") return frontSlots(d.need)!==null;
+  return true;
+}
+function placeOK(i,comp){
+  const s=S.pal[i];
+  if(s.lock>0) return true;            // 쓰레기통
+  if(s.comp===0) return true;
+  if(s.comp & comp) return false;
+  return true;
+}
+function selectCard(idx){
+  if(S.over||S.busy||S.paused) return;
+  const c=S.hand[idx]; if(!c) return;
+  S.mergeA=null;
+  if(S.sel===idx){S.sel=null;render();return;}
+  sfx("select");
+  if(!canPlay(c)){
+    const d=defOf(c);
+    if(d.e>S.e){
+      say(`기력이 부족합니다. <b>${d.n}</b>은(는) 기력이 ${d.e} 필요합니다.`,"bad");
+    } else if(d.type==="skill"){
+      say(`<b>${d.n}</b>을(를) 쓸 수 없습니다 — 안료접시에 <b>${needNames(d.need)}</b> 칸이 `
+          +(needList(d.need).length>1?"모두 갖춰지지 않았습니다.":"없습니다."),"bad");
+      tut("needcolor");
+    } else if(d.type==="color"){
+      say("안료접시에 이 색을 놓을 자리가 없습니다.","bad");
+      tut("merge");
+    }
+    render();
+    return;
+  }
+  S.sel=idx;
+  const d=defOf(c);
+  if(d.type!=="color"&&!needsTarget(d)) playSelected(null);
+  else render();
+}
+function clickSlot(i){
+  if(S.over||S.busy||S.paused) return;
+  if(S.sel!==null){
+    const c=S.hand[S.sel], d=defOf(c);
+    if(d.type!=="color") return;
+    if(!placeOK(i,d.comp)){
+      say(`${i+1}번 칸(${CNAME[S.pal[i].comp]})에는 ${d.n}을(를) 놓을 수 없습니다 — 성분이 겹칩니다.`,"bad");
+      render(); return;
+    }
+    placeColor(i,S.sel);
+    return;
+  }
+  const s=S.pal[i];
+  // 쓰레기통 — 색상 칸을 먼저 고른 뒤 검정 칸을 누르면 그 칸을 통째로 버린다
+  if(s.lock>0){
+    // 검정은 고르는 쪽이 될 수 없다 — 검정끼리 합치거나 검정을 버리는 일은 없다
+    if(S.mergeA===null){ showLocked(i); return; }   // 아무것도 안 고른 채 누르면 — 안에 든 카드 보기
+    const a=S.pal[S.mergeA];
+    const n=a.cards.length;
+    a.cards.forEach(c=>s.cards.push(c));
+    s.lock+=n;                               // 버린 만큼 잠금이 늘어난다
+    say(`${S.mergeA+1}번 칸의 <b>${CNAME[a.comp]}</b>(색상 카드 ${n}장)을(를) `
+        +`${i+1}번 검정 칸에 버렸습니다. 잠금 ${s.lock}턴으로 늘었습니다.`,"");
+    S.pal[S.mergeA]=slot();
+    S.mergeA=null; tut("black"); render(); return;
+  }
+  // 혼합
+  if(s.comp===0) return;
+  if(S.mergeA===null){S.mergeA=i;render();return;}
+  if(S.mergeA===i){S.mergeA=null;render();return;}
+  const a=S.pal[S.mergeA], b=S.pal[i];
+  if(a.comp & b.comp){ say("성분이 겹쳐 혼합할 수 없습니다.",""); S.mergeA=null; render(); return; }
+  const lo=Math.min(S.mergeA,i), hi=Math.max(S.mergeA,i);
+  const comp=a.comp|b.comp, cards=[...a.cards,...b.cards];
+  // 연출용 — 결과는 앞 칸(lo)에 남으므로 뒤 칸(hi)의 물감이 앞 칸으로 날아간다
+  const fxFrom=slotEl(hi)&&slotEl(hi).getBoundingClientRect(), fxFromC=S.pal[hi].comp, fxToC=S.pal[lo].comp;
+  S.pal[lo]={comp,cards,lock:0};
+  S.pal[hi]=slot();
+  if(comp===7){ S.pal[lo].lock=cards.length;
+    say(`혼합으로 검정이 생겼습니다. ${cards.length}장이 들어가 ${cards.length}턴 잠김.`,"bad");
+    tut("black");
+  } else {
+    say(`${CNAME[a.comp]} + ${CNAME[b.comp]} → <b>${CNAME[comp]}</b>. 빈칸이 하나 생겼습니다.`,"hi");
+    tut("merge");
+  }
+  S.mergeA=null; render();
+  fxPaint(fxFrom,lo,fxFromC,fxToC,comp);
+}
+function placeColor(i,handIdx){
+  if(S.over||S.busy||S.paused) return;
+  const c=S.hand[handIdx], d=defOf(c), s=S.pal[i];
+  // 연출용 — 손패 카드 자리에서 칸으로 물감이 날아간다. 잠긴 칸은 검정(7)에 버리는 것
+  const hc=document.getElementById("hand").children[handIdx];
+  const fxFrom=hc&&hc.getBoundingClientRect(), fxToC=s.lock>0?7:s.comp;
+  S.hand.splice(handIdx,1); S.sel=null;
+  if(s.lock>0){                      // 쓰레기통
+    s.cards.push(c); s.lock+=1;
+    say(`${d.n}을(를) ${i+1}번 검정 칸에 버렸습니다. 잠금 ${s.lock}턴으로 늘었습니다.`,"");
+  } else if(s.comp===0){
+    s.comp=d.comp; s.cards.push(c);
+    if(d.comp===7){                  // 검정 카드를 빈 칸에 직접 놓은 경우
+      s.lock=s.cards.length;
+      say(`${i+1}번 칸에 <b>검정</b>. ${s.cards.length}턴 잠김.`,"bad");
+      tut("black");
+    } else say(`${i+1}번 칸에 ${d.n}.`,"");
+  } else {
+    const nc=s.comp|d.comp;
+    s.cards.push(c); s.comp=nc;
+    if(nc===7){ s.lock=s.cards.length;
+      say(`${i+1}번 칸이 <b>검정</b>이 되었습니다. ${s.cards.length}장이 들어가 ${s.cards.length}턴 잠김.`,"bad");
+      tut("black");
+    } else say(`${i+1}번 칸이 <b>${CNAME[nc]}</b>이(가) 되었습니다.`,"hi");
+  }
+  tut("consume");          // 첫 색상 배치 직후
+  render();
+  fxPaint(fxFrom,i,d.comp,fxToC,S.pal[i].lock>0?7:S.pal[i].comp);
+}
+function consumeSlot(i){
+  const s=S.pal[i];
+  s.cards.forEach(c=>S.disc.push(c));
+  S.pal[i]=slot();
+}
+function playSelected(foeIdx){
+  if(S.over||S.busy||S.paused) return;    // 적 턴·연출 중엔 쓸 수 없다
+  const idx=S.sel; if(idx===null) return;
+  const c=S.hand[idx], d=defOf(c);
+  if(d.e>S.e) return;
+  const target=foeIdx!==null?S.foes[foeIdx]:null;
+  if(target&&target.hp<=0) return;
+  if(d.type.slice(0,5)==="white") return playWhite(idx,c,d);
+
+  let usedComp=0, usedLabel="";
+  if(d.type==="skill"){
+    const si=frontSlots(d.need); if(!si) return;
+    usedLabel=compLabel(si.map(i=>S.pal[i].comp));
+    // 색 저항은 소비한 성분을 전부 합쳐서 판정한다 (주황+초록 → 7)
+    si.forEach(i=>{ usedComp|=S.pal[i].comp; });
+    si.forEach(i=>consumeSlot(i));
+  } else if(d.type==="atk"||d.type==="def"){
+    const si=frontSlot(d.req);
+    if(si>=0){ usedComp=d.req; usedLabel=CNAME[d.req]; consumeSlot(si); }
+  }
+  // 연출 — 손패에서 사라지기 전에 카드 자리를 재 둔다. 물방울로 변해 대상에게 날아간다
+  { const hc=document.getElementById("hand").children[idx];
+    fxUse(hc&&hc.getBoundingClientRect(), d, target, usedComp);
+    if(!d.exhaust) fxDiscard([hc], fxMs(FX_SHRINK)); }   // 쓴 카드는 물방울을 내놓고 버린 덱으로
+  S.e-=d.e;
+  S.hand.splice(idx,1); S.sel=null;
+  if(d.exhaust){ S.exile.push(c); say(`${d.n}이(가) <b>소멸</b>했습니다.`,""); }
+  else S.disc.push(c);
+
+  const strong = usedComp!==0;
+  const dealt=new Map();
+  fxComp=usedComp;           // 연출 — 이 카드의 피해에 "저항" 표시를 붙일지 판단한다
+
+  if(d.type==="def"){
+    const g=strong?d.up:d.blk;
+    S.blk+=g; tut("block");
+    say(`${d.n} — 방어도 ${g}`+(strong?` (${usedLabel} 소비)`:"")+".", "");
+  }
+  if(d.type==="atk"&&target){
+    const base=(strong?d.up:d.dmg)+S.str;
+    const v=calcDmg(base,target,usedComp);
+    const t=dealTo(target,v); dealt.set(target,(dealt.get(target)||0)+t);
+    say(`${d.n} → ${target.n} ${v} 피해`+(strong?` (${usedLabel} 소비)`:"")+".", "");
+    resistNote(target,usedComp,base,v,usedLabel);
+  }
+  if(d.type==="skill"){
+    // 피해는 힘을 적용하되, 같은 카드가 주는 힘은 다음 장부터 — 카드 문구 순서 그대로
+    const base = d.dmg ? d.dmg+S.str : 0;
+    if(d.blk){ S.blk+=d.blk; say(`${d.n} — 방어도 ${d.blk}.`,""); tut("block"); }
+    const alive = ()=>S.foes.filter(f=>f.hp>0);
+    const hits=d.hits||1;
+    const touched=[];
+    const mark=f=>{ if(touched.indexOf(f)<0) touched.push(f); };
+    if(d.dmg){
+      if(d.rand){
+        // 무작위 — 타격 한 번마다 살아 있는 적 중에서 다시 고른다
+        for(let h=0;h<hits;h++){
+          const pool=alive(); if(!pool.length) break;
+          const f=pool[(Math.random()*pool.length)|0];
+          const v=calcDmg(base,f,usedComp);
+          dealt.set(f,(dealt.get(f)||0)+dealTo(f,v)); mark(f);
+          say(`${d.n} → ${f.n} ${v} 피해 <span class="muted">(무작위 ${h+1}/${hits})</span>.`,"");
+        }
+      } else {
+        (d.aoe?alive():(target?[target]:[])).forEach(f=>{
+          let tot=0;
+          for(let h=0;h<hits;h++) tot+=dealTo(f,calcDmg(base,f,usedComp));
+          dealt.set(f,(dealt.get(f)||0)+tot); mark(f);
+          const shown=calcDmg(base,f,usedComp);
+          say(`${d.n} → ${f.n} ${shown}${hits>1?` ×${hits}회`:""} 피해.`,"");
+          resistNote(f,usedComp,base,shown,usedLabel);
+        });
+      }
+    }
+    // 디버프 — 피해가 있으면 실제로 맞은 적에게, 없으면 원래 대상 규칙대로
+    const marked = d.dmg ? touched : (d.aoe?alive():(target?[target]:[]));
+    marked.forEach(f=>{
+      if(d.vuln){ f.vuln+=d.vuln; say(`${f.n}에게 <b>취약</b> ${d.vuln}.`,""); }
+      if(d.weak){ f.weak+=d.weak; say(`${f.n}에게 <b>약화</b> ${d.weak}.`,""); }
+      if(d.burnT){
+        f.burn+=d.burnT; f.burnD=Math.max(f.burnD,d.burnD);
+        say(`${f.n}에게 <b>화상 ${f.burnD}</b> ${d.burnT}턴.`,"");
+      }
+    });
+    if(d.drain){                       // 막힌 피해는 빼고, 실제로 들어간 만큼만 회복
+      let sum=0; dealt.forEach(v=>{ sum+=v; });
+      if(sum>0){
+        const b=S.hp; S.hp=Math.min(S.maxHp,S.hp+sum);
+        say(`${d.n} — 막히지 않은 피해 ${sum}만큼 체력을 ${S.hp-b} 회복했습니다. 체력 ${S.hp}.`,"hi");
+      } else say(`${d.n} — 들어간 피해가 없어 회복하지 못했습니다.`,"");
+    }
+    if(d.heal){
+      const b=S.hp; S.hp=Math.min(S.maxHp,S.hp+d.heal);
+      say(`${d.n} — 체력을 ${S.hp-b} 회복했습니다. 체력 ${S.hp}.`,"hi");
+    }
+    if(d.str){ S.str+=d.str; say(`${d.n} — <b>힘 ${d.str}</b>을(를) 얻었습니다.`,"hi"); }
+    if(d.nrg){ S.e+=d.nrg; say(`${d.n} — 기력 ${d.nrg}을(를) 얻었습니다.`,"hi"); }
+    let dumped=0;
+    if(d.discardHand){                 // 손패를 통째로 버린다 (이 카드는 이미 손에서 빠졌다)
+      dumped=S.hand.length;
+      S.hand.forEach(x=>S.disc.push(x)); S.hand=[];
+      say(`${d.n} — 손패 ${dumped}장을 버렸습니다.`,"");
+    }
+    if(d.draw){                        // 숫자, 또는 "버린만큼" — 방금 버린 장수를 그대로 쓴다
+      const want = d.draw==="버린만큼" ? dumped : d.draw;
+      let got=0; for(let i=0;i<want;i++) if(drawOne()) got++;
+      say(`${d.n} — 카드를 ${got}장 뽑았습니다.`+(got<want?" (더 뽑을 수 없습니다)":""),"");
+    }
+    if(d.discardN) pickDiscard={n:d.discardN,name:d.n,then:()=>gainCards(d)};   // 버린 뒤에 만든다
+    else if(d.gain) gainCards(d);
+    if(d.retain) pickRetain={n:d.retain,name:d.n};   // 카드가 다 해결된 뒤 고르게 한다
+    if(d.retainEach){                  // 이번 전투 내내 — 턴 종료 때마다 고른다
+      S.retainEach+=d.retainEach; S.retainSrc=d.n;
+      say(`${d.n} — 이번 전투 동안 매 턴 종료 시 카드 ${S.retainEach}장을 보존합니다.`,"hi");
+    }
+    if(d.wildNeed&&!S.wild){           // 이번 턴에만 — endTurn 에서 풀린다
+      S.wild=true;
+      say(`${d.n} — 이번 턴 동안 스킬의 요구 색을 <b>아무 색 칸</b>으로나 채웁니다.`,"hi");
+    }
+    if(d.noResist&&!S.noResist){       // 이 전투 내내 유지된다
+      S.noResist=true;
+      say(`${d.n} — 이제부터 적의 <b>색 저항을 무시</b>합니다.`,"hi");
+    }
+  }
+  // 투명화 패시브(내부 키 shell) — 모든 타격이 끝난 뒤 판정
+  dealt.forEach((amt,f)=>{
+    if(amt>0&&f.shell&&f.hp>0){
+      const g=Math.min(amt,SHELL_MAX);   // 받은 피해만큼, 최대 SHELL_MAX
+      f.shell=false; f.blk+=g;
+      say(`${f.n}이(가) 투명해져 방어도 ${g}를 얻었습니다.`,"bad");
+      tut("shell");
+    }
+  });
+  S.foes.forEach(f=>{ if(f.hp<=0&&f.hp!==-999){ f.hp=0; } });
+  const dead=S.foes.filter(f=>f.hp<=0);
+  dead.forEach(f=>{ if(!f.dead){f.dead=true;say(`${f.n} 처치.`,"hi");} });
+  if(S.foes.every(f=>f.hp<=0)) return finish(true);
+  render();
+  if(pickRetain){ const p=pickRetain; pickRetain=null; openPick(p.n,p.name); }
+  if(pickDiscard){ const p=pickDiscard; pickDiscard=null; openDiscard(p.n,p.name,p.then); }
+}
+/* 카드를 만들어 손에 넣는다 — 덱에서 뽑는 게 아니다 */
+function gainCards(d){
+  const n=d.gainN||1, made=[];
+  let full=false;
+  for(let i=0;i<n;i++){
+    if(S.hand.length>=HAND_MAX){ full=true; break; }
+    const k = d.gain==="원색" ? PRIMARY[(Math.random()*PRIMARY.length)|0] : d.gain;
+    if(!DEF[k]){ say(`${d.n} — 만들 카드(${d.gain})가 카드 표에 없습니다.`,"bad"); break; }
+    S.hand.push({k,uid:uid++}); made.push(DEF[k].n);
+  }
+  if(made.length) say(`${d.n} — <b>${made.join(" · ")}</b>을(를) 손에 넣었습니다.`,"hi");
+  if(full) say(`${d.n} — 손이 가득 차 나머지는 넣지 못했습니다.`,"");
+}
+
+/* ---------- 카드 고르기 모달 ---------- */
+/* 보존·하양이 함께 쓴다. 이미 카드를 낸 뒤라 물러설 수 없으므로 닫기 수단을 두지 않는다 */
+/* onCancel 을 주면 「돌아가기」가 붙는다. 이미 카드를 낸 뒤라 물러설 수 없는
+   보존·하양에는 주지 않는다 — 상인·모닥불처럼 아직 아무것도 치르지 않은 곳에만 준다 */
+function chooser(title,sub,build,onCancel,label){
+  if(S) S.paused=true;              // 상인처럼 전투 밖에서도 쓴다
+  document.getElementById("pickh").textContent=title;
+  document.getElementById("picksub").innerHTML=sub;
+  const g=document.getElementById("pickgrid"); g.innerHTML=""; g.classList.remove("forge");
+  build(g);
+  const foot=document.getElementById("pickfoot");
+  foot.hidden=!onCancel;
+  document.getElementById("pickback").onclick=onCancel||null;
+  document.getElementById("pickback").textContent=label||"← 돌아가기";
+  document.getElementById("pickover").hidden=false;
+}
+function closeChooser(){
+  document.getElementById("pickover").hidden=true;
+  if(S&&!S.over){ S.paused=false; render(); }
+}
+
+/* 보존 — 손패에서 색상 카드를 뺀 나머지를 모아 고르게 하고, 고른 카드에 hold 를 건다*/
+let pickRetain=null;
+function retainCands(){ return S.hand.filter(c=>!staysInHand(DEF[c.k])&&!c.hold); }
+function openPick(n,src,then){
+  const cand=retainCands();
+  const finish=()=>{
+    closeChooser();
+    if(then){ then(); return; }        // 턴 종료 중이면 이어서 턴을 끝낸다
+    if(resumeFn){ const f=resumeFn; resumeFn=null; f(); }
+  };
+  if(n<=0||!cand.length){
+    if(n>0&&!then) say(`${src} — 보존할 카드가 없습니다.`,"");
+    finish(); return;
+  }
+  // 슬더슬식 — 카드를 눌러 체크(최대 n장), 「넘어가기」로 확정. 아무것도 안 고르면 보존하지 않는다
+  const picked=[], els=[];
+  const subTx=()=>`${src} — 최대 ${n}장까지 고를 수 있습니다. 고르지 않고 넘어가면 보존하지 않습니다. `
+    +`(선택 ${picked.length}/${n})`;
+  const refresh=()=>{
+    document.getElementById("picksub").textContent=subTx();
+    const full=picked.length>=n;
+    els.forEach(({c,card})=>{
+      const on=picked.indexOf(c)>=0;
+      card.classList.toggle("sel",on);
+      card.classList.toggle("no",full&&!on);   // 상한에 닿으면 나머지는 흐리게
+    });
+  };
+  chooser("보존할 카드를 고르세요", subTx(),
+    g=>cand.forEach(c=>{
+      const card=makeCardEl(defOf(c));
+      card.onclick=()=>{
+        const j=picked.indexOf(c);
+        if(j>=0) picked.splice(j,1);
+        else if(picked.length<n) picked.push(c);
+        else return;                   // 보존 가능한 수를 넘기면 체크되지 않는다
+        refresh();
+      };
+      els.push({c,card});
+      g.appendChild(card);
+    }),
+    ()=>{
+      picked.forEach(c=>{ c.hold=true; say(`<b>${DEF[c.k].n}</b>을(를) <b>보존</b>합니다.`,"hi"); });
+      if(!picked.length) say(`${src} — 보존하지 않고 넘어갑니다.`,"");
+      finish();
+    }, "넘어가기");
+}
+
+/* 골라 버리기 — 손패 N장을 한 장씩 골라 버린 덱으로 보낸다. 다 버리면 then 을 부른다 */
+let pickDiscard=null;
+function openDiscard(n,src,then){
+  const done=()=>{ closeChooser(); if(then) then(); render();
+    if(resumeFn){ const f=resumeFn; resumeFn=null; f(); } };
+  if(n<=0||!S.hand.length){ done(); return; }
+  if(S.hand.length<=n){                 // 고를 것도 없이 전부 버린다
+    const k=S.hand.length;
+    S.hand.forEach(x=>S.disc.push(x)); S.hand=[];
+    say(`${src} — 손패 ${k}장을 전부 버렸습니다.`,"");
+    done(); return;
+  }
+  chooser("버릴 카드를 고르세요",
+    `${src} — 고른 카드는 버린 덱으로 갑니다. 남은 선택 ${n}장.`,
+    g=>S.hand.forEach(c=>{
+      const card=makeCardEl(defOf(c));
+      card.onclick=()=>{
+        const j=S.hand.indexOf(c); if(j<0) return;
+        S.hand.splice(j,1); S.disc.push(c);
+        say(`<b>${DEF[c.k].n}</b>을(를) 버렸습니다.`,"");
+        document.getElementById("pickover").hidden=true;
+        openDiscard(n-1,src,then);
+      };
+      g.appendChild(card);
+    }));
+}
+
+/* ---------- 하양 (기획서 §8) ---------- */
+function playWhite(idx,c,d){
+  if(d.type==="white"){            // 1단계 — 효과를 고르고 손으로 돌아온다
+    S.e-=d.e; S.sel=null;
+    openWhiteChoice(c);
+    return;
+  }
+  if(d.type==="white2"){           // 2단계 ② — 다른 카드 1장 강화
+    const cand=S.hand.filter((x,j)=>j!==idx&&canUpgrade(x));
+    if(!cand.length){
+      say("강화할 수 있는 카드가 손에 없습니다.","bad");
+      S.sel=null; render(); return;  // 기력도 카드도 소모하지 않는다
+    }
+    // 강화된 하양으로 걸면 이번 전투, 그냥 하양이면 이번 턴 (기획서 §9)
+    const scope = c.upg ? "battle" : "turn";
+    S.e-=d.e; S.hand.splice(idx,1); S.sel=null;
+    S.exile.push(c); say(`하양이 <b>소멸</b>했습니다.`,"");
+    openUpgradePick(cand,scope);
+    return;
+  }
+  // 2단계 ① — 색 생성
+  S.e-=d.e; S.hand.splice(idx,1); S.sel=null;
+  S.exile.push(c); say(`하양이 <b>소멸</b>했습니다.`,"");
+  openWhiteMake();
+}
+function openWhiteChoice(c){
+  chooser("하양 — 효과를 고르세요",
+    "고른 효과로 고정된 채 손으로 돌아옵니다. 다시 내면 발동하고, 그때 하양은 소멸합니다. 효과를 고르기 전에는 강화할 수 없습니다.",
+    g=>[["cW1","① 색 생성"],["cW2","② 강화"]].forEach(pair=>{
+      const card=makeCardEl(DEF[pair[0]]);
+      card.insertBefore(el("div","pickcap",pair[1]),card.firstChild);
+      card.onclick=()=>{
+        c.k=pair[0];
+        say(`하양을 <b>${pair[1]}</b>으로 고정했습니다.`,"hi");
+        closeChooser();
+      };
+      g.appendChild(card);
+    }));
+}
+function openUpgradePick(cand,scope){
+  chooser("강화할 카드를 고르세요",
+    (scope==="battle" ? "강화된 하양 — 강화가 이번 전투 동안 유지됩니다."
+                      : "하양 — 강화가 이번 턴 동안만 유지됩니다.")
+    + " 카드당 한 번만 강화할 수 있어, 이미 강화된 카드와 강화값이 없는 카드는 목록에 없습니다.",
+    g=>cand.forEach(x=>{
+      const card=makeCardEl(defOf({k:x.k,upg:{scope}}));   // 강화되면 어떻게 되는지 미리 보여준다
+      card.classList.add("upg");
+      card.onclick=()=>{
+        x.upg={scope};
+        const d=DEF[x.k];
+        const chg=Object.keys(d.upv).map(k=>`${k} ${d.upv[k]}`).join(" · ");
+        say(`<b>${d.n}</b>을(를) <b>강화</b>했습니다`
+            +(chg?` — ${chg}`:"")+`. (${scope==="battle"?"이번 전투":"이번 턴"})`,"hi");
+        closeChooser();
+      };
+      g.appendChild(card);
+    }));
+}
+function openWhiteMake(){
+  chooser("하양 — 만들 색을 고르세요",
+    "고른 색상 카드가 손에 생깁니다. 안료접시에 놓지 않고 턴을 넘기면 소멸합니다(휘발성).",
+    g=>WHITE_MAKES.forEach(pair=>{
+      const card=makeCardEl(DEF[pair[0]]);
+      card.onclick=()=>{
+        if(S.hand.length>=HAND_MAX){
+          say("손이 가득 차 색을 만들지 못했습니다.","bad"); closeChooser(); return;
+        }
+        S.hand.push({k:pair[0],uid:uid++,vol:true});
+        say(`<b>${DEF[pair[0]].n}</b>을(를) 손에 만들었습니다. 이번 턴이 끝나면 소멸합니다.`,"hi");
+        closeChooser();
+      };
+      g.appendChild(card);
+    }));
+}
+
+/* ---------- render ---------- */
+function el(t,c,h){const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;}
+function pigment(comp){return `var(${CVAR[comp]})`;}
+
+/* ---------- 연출: 물감 혼합 ----------
+   규칙은 이미 끝난 뒤에 보여주기만 한다. 상태(S)는 건드리지 않는다.
+   fromRect   날아오는 물감의 출발 위치 (손패 카드 또는 합쳐지는 칸)
+   toIdx      도착 칸 번호 — 결과가 그려진 칸
+   fromC/toC  날아오는 색 / 도착 칸에 원래 있던 색 (0 = 빈칸)
+   resC       결과 색 (7 = 검정) */
+/* 연출 켜기 — 처음엔 OS의 '움직임 줄이기'를 따랐지만, 윈도우 애니메이션 효과가 꺼진 PC에서는
+   연출이 통째로 사라져 프로토타입을 보여줄 수 없었다. 항상 켠다 */
+const FX_OK = true;
+let fxUntil=0;   // 연출이 끝나는 시각 — 튜토리얼 창은 이 뒤에 연다 (pumpTut)
+/* 연출 속도 — 1 이면 처음 만든 속도, 클수록 빠르다. 모든 연출 시간이 이 값으로 나뉜다 */
+const FX_SPEED=1.6;
+function fxAnim(e,k,o){ const sp=o.raw?1:FX_SPEED; return e.animate(k,{...o,duration:o.duration/sp,delay:(o.delay||0)/sp}); }
+function fxMs(ms){ return ms/FX_SPEED; }
+function fxLayer(){
+  let l=document.getElementById("fx");
+  if(!l){ l=el("div","fxlayer"); l.id="fx"; document.body.appendChild(l); }
+  return l;
+}
+function slotEl(i){ return document.getElementById("pal").children[i]; }
+function fxPlace(e,r){ e.style.left=r.left+"px"; e.style.top=r.top+"px"; e.style.width=r.width+"px"; e.style.height=r.height+"px"; }
+function fxCol(c){ return S.wild&&c!==7 ? "#9a9a9a" : pigment(c); }   // 심봉사 턴에는 색을 드러내지 않는다
+function fxPaint(fromRect,toIdx,fromC,toC,resC){
+  if(!FX_OK||!fromRect) return;
+  const L=fxLayer(), tgt=slotEl(toIdx); if(!tgt) return;
+  fxUntil=Math.max(fxUntil, performance.now()+fxMs(560)+1900);
+  let tr=tgt.getBoundingClientRect();
+  const a={x:fromRect.left+fromRect.width/2, y:fromRect.top+fromRect.height/2};
+  // 도착 전까지 결과 색을 가린다 — 원래 칸 색(빈칸이면 바탕색)으로 덮어 둔다
+  const cover=fxCover(toIdx, toC ? fxCol(toC) : null);   // null = 빈칸 모습 그대로
+  // 1) 칸 위로 날아간다 → 2) 위에서 똑 떨어진다 (fx-candidates 7번)
+  const blob=el("div","fx-blob"); blob.style.background=fxCol(fromC);
+  blob.style.left=(a.x-16)+"px"; blob.style.top=(a.y-16)+"px";
+  L.appendChild(blob);
+  const above={x:tr.left+tr.width/2, y:tr.top-48};
+  const dx=above.x-a.x, dy=above.y-a.y;
+  fxAnim(blob,[
+    {transform:"translate(0,0) scale(.55)"},
+    {transform:`translate(${dx/2}px,${Math.min(dy/2,0)-40}px) scale(.9)`},
+    {transform:`translate(${dx}px,${dy}px) scale(.85)`}
+  ],{duration:330,easing:"ease-out",fill:"forwards"}).onfinish=()=>{
+    // 떨어지는 동안 화면이 밀렸을 수 있으니 도착점을 다시 잰다
+    const now=slotEl(toIdx); if(now) tr=now.getBoundingClientRect();
+    const fall=(tr.top+tr.height/2)-above.y;
+    blob.style.borderRadius="50% 50% 50% 50% / 60% 60% 40% 40%";
+    fxAnim(blob,[
+      {transform:`translate(${dx}px,${dy}px) scale(.8,1.15)`},
+      {transform:`translate(${dx}px,${dy+fall-6}px) scale(.75,1.25)`,offset:.85},
+      {transform:`translate(${dx}px,${dy+fall}px) scale(1.7,.35)`,opacity:1},
+      {transform:`translate(${dx}px,${dy+fall}px) scale(2.1,.2)`,opacity:0}
+    ],{duration:230,easing:"cubic-bezier(.5,0,1,.6)",fill:"forwards"}).onfinish=()=>{ blob.remove(); land(); };
+  };
+
+  function land(){
+    const now=slotEl(toIdx); if(now) tr=now.getBoundingClientRect();
+    const b={x:tr.left+tr.width/2, y:tr.top+tr.height/2};
+    const trash = toC===7;                 // 검정 칸에 버림 — 번지지 않고 빨려 들어간다
+    sfx(trash?"black":"drop");
+    if(resC===7&&!trash) sfx("black", fxMs(380));
+    else if(toC && toC!==7 && resC!==toC) sfx("mix", fxMs(380));
+    if(!trash) fxBloom(cover, resC, {dur:1300, filter:"fxwc"});   // 배속 없이 — 먹이 번지는 시간
+    fxRipples(L, b, trash?pigment(7):fxCol(fromC), trash);
+    if(!trash) fxSplash(L, b, fxCol(fromC));
+    fxAnim(cover,[{opacity:1},{opacity:1,offset:.85},{opacity:0}],
+                  {duration:trash?420:1900,easing:"ease-out",fill:"forwards",raw:!trash}).onfinish=()=>cover.remove();
+    const s=slotEl(toIdx);
+    if(s) fxAnim(s,resC===7
+      ? [{transform:"translateX(0)"},{transform:"translateX(-5px)"},{transform:"translateX(5px)"},
+         {transform:"translateX(-3px)"},{transform:"translateX(0)"}]
+      : [{transform:"scale(1)"},{transform:"scale(.95)"},{transform:"scale(1.05)"},{transform:"scale(1)"}],
+      {duration:resC===7?380:420,delay:resC===7&&!trash?520:0,easing:"ease-out"});
+    const mixed = toC && toC!==7 && resC!==toC;
+    if((mixed||(resC===7&&!trash)) && !S.wild)
+      fxLabel(L, b, tr, resC===7?"검정 · 잠김":CNAME[resC]+"!", pigment(resC), 380);
+  }
+}
+/* 덮개 — 연출이 끝날 때까지 칸의 원래 모습을 대신 보여준다. 칸이 밀려도 따라간다 */
+function fxCover(idx,bg){
+  const L=fxLayer(), s=slotEl(idx);
+  const cover=el("div","fx-cover"); if(s) fxPlace(cover,s.getBoundingClientRect());
+  if(bg) cover.style.background=bg; else cover.classList.add("blank");
+  L.appendChild(cover);
+  (function follow(){
+    if(!cover.isConnected) return;
+    const c=slotEl(idx); if(c) fxPlace(cover,c.getBoundingClientRect());
+    requestAnimationFrame(follow);
+  })();
+  return cover;
+}
+/* 수채 번짐 — 가운데는 묽고 가장자리는 진하게, 경계는 필터로 일그러뜨린다
+   o.dur 번지는 시간 · o.filter SVG 필터 id · o.dense 짙게(적의 오염) · o.at 번지기 시작하는 자리(%) */
+function fxBloom(cover,resC,o){
+  const col=pigment(resC);
+  const mid = resC===7 ? col : `color-mix(in srgb,${col} 72%,#fff)`;
+  const wrap=el("div","fx-wc"); wrap.style.filter=`url(#${o.filter})`;
+  cover.appendChild(wrap);
+  const bloom=el("div","fx-bloom");
+  if(o.at){ bloom.style.left=o.at.x+"%"; bloom.style.top=o.at.y+"%"; }
+  bloom.style.background = o.dense
+    ? `radial-gradient(circle, ${col} 0 55%, color-mix(in srgb,${col} 80%,#000) 80%, transparent 100%)`
+    : `radial-gradient(circle, ${mid} 0 42%, ${col} 68%, color-mix(in srgb,${col} 68%,#000) 90%, transparent 100%)`;
+  wrap.appendChild(bloom);
+  fxAnim(bloom,[{transform:"scale(0)",opacity:.7},{transform:`scale(${o.dense?1.3:1.5})`,opacity:.95,offset:o.dense?.5:.4},
+                 {transform:`scale(${o.dense?5.6:3.6})`,opacity:1}],   // 혼합은 천천히 퍼져 번지는 가장자리가 오래 보이게
+                {duration:o.dur,easing:"cubic-bezier(.2,.65,.3,1)",fill:"forwards",raw:true});
+  // 마르면서 고른 색으로 — 테두리는 잠깐 진하게 남는다
+  const solid=el("div","fx-solid"); solid.style.background=col; cover.appendChild(solid);
+  fxAnim(solid,[{opacity:0},{opacity:0,offset:.65},{opacity:1}],{duration:o.dur*1.2,fill:"forwards",raw:true});
+  const edge=el("div","fx-edge"); edge.style.boxShadow=`inset 0 0 0 ${o.dense?5:3}px color-mix(in srgb,${col} 60%,#000)`;
+  cover.appendChild(edge);
+  fxAnim(edge,[{opacity:0},{opacity:0,offset:.5},{opacity:.95,offset:.8},{opacity:o.dense?.5:0}],
+               {duration:o.dur*1.4,fill:"forwards",raw:true});
+}
+function fxRipples(L,b,col,small){
+  [0,130,260].slice(0,small?1:3).forEach((dl,i)=>{
+    const r=el("div","fx-ring"); r.style.left=b.x+"px"; r.style.top=b.y+"px";
+    r.style.borderColor = i===0&&!small ? "rgba(255,255,255,.6)" : `color-mix(in srgb,${col} 70%,#fff)`;
+    L.appendChild(r);
+    fxAnim(r,[{transform:"scale(.15)",opacity:.9},{transform:`scale(${small?1.1:1.7})`,opacity:0}],
+              {duration:small?420:900,delay:dl,easing:"ease-out",fill:"both"}).onfinish=()=>r.remove();
+  });
+}
+function fxSplash(L,b,col){
+  for(let i=0;i<5;i++){
+    const s=el("div","fx-drop"), ang=-Math.PI*(.15+.7*i/4), dist=24+Math.random()*12;
+    s.style.left=b.x+"px"; s.style.top=b.y+"px"; s.style.background=col;
+    L.appendChild(s);
+    fxAnim(s,[{transform:"translate(0,0) scale(1)",opacity:1},
+               {transform:`translate(${Math.cos(ang)*dist}px,${Math.sin(ang)*dist}px) scale(.6)`,opacity:1,offset:.6},
+               {transform:`translate(${Math.cos(ang)*dist*1.2}px,${Math.sin(ang)*dist*1.2+14}px) scale(.3)`,opacity:0}],
+              {duration:480,easing:"ease-out",fill:"both"}).onfinish=()=>s.remove();
+  }
+}
+function fxLabel(L,b,tr,txt,border,delay){
+  const lb=el("div","fx-label",txt); lb.style.borderColor=border;
+  L.appendChild(lb);
+  const w=lb.offsetWidth, h=lb.offsetHeight;
+  lb.style.left=(b.x-w/2)+"px"; lb.style.top=(tr.top-h-4)+"px";
+  fxAnim(lb,[{transform:"translateY(8px)",opacity:0},{transform:"translateY(0)",opacity:1,offset:.25},
+              {transform:"translateY(-14px)",opacity:1,offset:.75},{transform:"translateY(-22px)",opacity:0}],
+             {duration:1000,delay,easing:"ease-out",fill:"both"}).onfinish=()=>lb.remove();
+}
+/* 적의 검정 오염 — 방울 없이 칸 안에서 짙은 먹이 스며 나온다 (fx-candidates 6번, 더 짙게)
+   taintSlots 는 상태만 바꾸고 화면은 나중에 그려지므로, 예약해 두고 render() 직후에 튼다 */
+let fxPending=[];
+function fxTaint(idx,prevC){
+  if(!FX_OK) return;
+  fxUntil=Math.max(fxUntil, performance.now()+2300);
+  fxPending.push(()=>{
+    const L=fxLayer(), s=slotEl(idx); if(!s) return;
+    const cover=fxCover(idx, prevC ? fxCol(prevC) : null);
+    cover.classList.add("quick");
+    const at={x:35+Math.random()*30, y:35+Math.random()*30};
+    sfx("taint");   // 스며 나오는 자리 — 매번 조금씩 다르게
+    fxBloom(cover, 7, {dur:1400, filter:"fxwc2", dense:true, at});
+    fxAnim(cover,[{opacity:1},{opacity:1,offset:.88},{opacity:0}],{duration:2300,fill:"forwards",raw:true})
+      .onfinish=()=>cover.remove();
+    const r=s.getBoundingClientRect();
+    setTimeout(()=>{
+      const c=slotEl(idx); if(!c) return;
+      fxAnim(c,[{transform:"translateX(0)"},{transform:"translateX(-6px)"},{transform:"translateX(6px)"},
+                 {transform:"translateX(-3px)"},{transform:"translateX(0)"}],{duration:400,easing:"ease-out"});
+    },1300);
+    // 테두리는 체력색 — 검정 테두리는 어두운 바탕에서 보이지 않는다
+    fxLabel(L,{x:r.left+r.width/2,y:r.top+r.height/2},r,"오염 · 3턴","var(--hp)",900);
+  });
+}
+/* ---------- 연출: 피해 숫자 · 타격감 ----------
+   적을 때리면: 튀어 오르는 숫자(A) + 화면 전체 흔들림(ㄴ) + 맞은 적 하얀 번쩍
+   내가 맞으면: 화면 가장자리 붉은 번짐(ㄷ) + 내 체력 줄 깜박임 + 튀어 오르는 숫자
+   연타는 한 번 맞을 때마다 차례로 나온다 (fxSeq 로 간격을 둔다) */
+let fxComp=0, fxSeq=0, fxSeqT=0, fxBase=0;   // fxBase: 카드 물방울이 날아가는 동안 피해 연출을 미룬다
+function fxNext(){                       // 같은 순간에 몰린 타격을 160ms 간격으로 펼친다
+  const now=performance.now();
+  if(now-fxSeqT>60) fxSeq=0;
+  fxSeqT=now;
+  return fxBase+(fxSeq++)*fxMs(160);
+}
+function fxNum(L,x,y,txt,cls,delay,dir){   // dir: -1 왼쪽 · 1 오른쪽 · 없으면 무작위
+  const n=el("div","fx-num "+cls,txt); n.style.left=x+"px"; n.style.top=y+"px"; L.appendChild(n);
+  const sx=(dir||(Math.random()<.5?-1:1))*(14+Math.random()*12);
+  fxAnim(n,[{transform:"translate(-50%,0) scale(.4)",opacity:0},
+            {transform:`translate(calc(-50% + ${sx*.5}px),-46px) scale(1.25)`,opacity:1,offset:.25},
+            {transform:`translate(calc(-50% + ${sx}px),-30px) scale(1)`,opacity:1,offset:.7},
+            {transform:`translate(calc(-50% + ${sx*1.2}px),-8px) scale(.9)`,opacity:0}],
+         {duration:900,delay,easing:"ease-out",fill:"both"}).onfinish=()=>n.remove();
+}
+function fxShakeScreen(delay){
+  const w=document.querySelector(".wrap"); if(!w) return;
+  fxAnim(w,[{transform:"translate(0,0)"},{transform:"translate(-8px,4px)"},{transform:"translate(7px,-4px)"},
+            {transform:"translate(-5px,3px)"},{transform:"translate(3px,-2px)"},{transform:"translate(0,0)"}],
+         {duration:380,delay,easing:"ease-out"});
+}
+function fxHit(f,ab,th){
+  if(!FX_OK||(ab<=0&&th<=0)) return;
+  const i=S.foes.indexOf(f), delay=fxNext(), comp=fxComp;
+  fxUntil=Math.max(fxUntil, performance.now()+delay+fxMs(900));
+  fxPending.push(()=>{
+    const L=fxLayer(), card=document.getElementById("foes").children[i]; if(!card) return;
+    const r=card.getBoundingClientRect(), x=r.left+r.width/2, y=r.top+22;
+    const res = comp && resistOf(f,comp)>0 ? `<small>저항</small>` : "";
+    if(ab>0&&th>0){ fxNum(L,x-24,y,String(ab),"blk",delay,-1); fxNum(L,x+22,y,th+res,"hp",delay+fxMs(60),1); }
+    else if(ab>0)  fxNum(L,x,y,String(ab),"blk",delay);       // 전부 방어도에 막혔다
+    else           fxNum(L,x,y,th+res,"hp",delay);
+    const fl=el("div","fx-flash"); fxPlace(fl,r); L.appendChild(fl);
+    fxAnim(fl,[{opacity:.8},{opacity:0}],{duration:240,delay,fill:"both"}).onfinish=()=>fl.remove();
+    fxShakeScreen(delay); sfx(th>0?"hit":"block", delay/FX_SPEED);
+  });
+}
+function fxHurt(ab,th){
+  if(!FX_OK||(ab<=0&&th<=0)) return;
+  const delay=fxNext();
+  fxUntil=Math.max(fxUntil, performance.now()+delay+fxMs(900));
+  fxPending.push(()=>{
+    const L=fxLayer(), me=document.querySelector(".me"); if(!me) return;
+    const r=me.getBoundingClientRect();
+    if(th>0){                                                   // 막힌 피해만이면 번지지 않는다
+      const v=el("div","fx-vign"); L.appendChild(v);
+      fxAnim(v,[{opacity:0},{opacity:1,offset:.15},{opacity:0}],{duration:700,delay,fill:"both"}).onfinish=()=>v.remove();
+    }
+    fxAnim(me,[{transform:"translateX(0)"},{transform:"translateX(-5px)"},{transform:"translateX(4px)"},{transform:"translateX(0)"}],
+           {duration:420,delay});
+    const fl=el("div","fx-flash hurt"); fxPlace(fl,r); L.appendChild(fl);
+    fxAnim(fl,[{opacity:0},{opacity:.55,offset:.2},{opacity:0}],{duration:500,delay,fill:"both"}).onfinish=()=>fl.remove();
+    const x=r.left+150, y=r.top+4;
+    sfx(th>0?"hurt":"block", delay/FX_SPEED);
+    if(ab>0&&th>0){ fxNum(L,x-24,y,String(ab),"blk",delay,-1); fxNum(L,x+22,y,String(th),"pc",delay+fxMs(60),1); }
+    else if(ab>0)  fxNum(L,x,y,String(ab),"blk",delay);
+    else           fxNum(L,x,y,String(th),"pc",delay);
+  });
+}
+/* ---------- 연출: 카드 사용 ----------
+   카드가 작아지며 물방울이 되고, 대상에게 곧게 날아가 꽂힌다 (fx-candidates 5·6)
+   · 공격  피해가 있는 카드 → 적에게. 쓴 색이 있으면 그 색 물방울. 닿으면 하얗게 번쩍 (물감은 튀지 않는다)
+   · 방어  방어도 숫자로 → 톡 터지는 고리 + 피어오르는 빛 알갱이 (수비 f1)
+   · 그 밖 카드 자리에서 위로 솟아 터진다 */
+const FX_SHRINK=240, FX_SHOT=200;
+function fxUse(fromRect,d,target,comp){
+  if(!FX_OK||!fromRect) return;
+  const def = d.type==="def" || (d.type==="skill" && d.blk && !d.dmg);
+  const atk = !def && !!d.dmg;
+  const col = atk ? (comp?pigment(comp):"#C0412F") : def ? "#5B9AD6" : (comp?pigment(comp):"#E9DDBA");
+  if(atk) fxBase=fxMs(FX_SHRINK+FX_SHOT);           // 적을 때리는 피해 숫자는 물방울이 닿은 뒤에
+  const ti = target ? S.foes.indexOf(target) : -1;
+  fxUntil=Math.max(fxUntil, performance.now()+fxMs(FX_SHRINK+FX_SHOT+900));
+  fxPending.push(()=>{
+    const L=fxLayer();
+    // 손패 카드는 이미 다시 그려져 사라졌다 — 같은 자리에 카드 모양 대역을 띄워 물방울로 줄인다
+    const g=el("div","fx-ghost"); fxPlace(g,fromRect); L.appendChild(g);
+    const cx=fromRect.left+fromRect.width/2, cy=fromRect.top+fromRect.height/2;
+    if(atk) sfx("shoot", fxMs(FX_SHRINK));
+    fxAnim(g,[{transform:"translate(0,0) scale(1)",borderRadius:"5px",background:"var(--bujeok)"},
+              {transform:"translate(0,-16px) scale(1.06)",borderRadius:"5px",background:"var(--bujeok)",offset:.25},
+              {transform:"translate(0,-26px) scale(.2,.15)",borderRadius:"50%",background:col}],
+           {duration:FX_SHRINK,easing:"ease-in",fill:"forwards"}).onfinish=()=>{
+      g.remove();
+      const drop=el("div","fx-shot"); drop.style.left=(cx-9)+"px"; drop.style.top=(cy-26-9)+"px";
+      drop.style.background=`radial-gradient(circle at 35% 35%, color-mix(in srgb,${col} 50%,#fff), ${col} 62%)`;
+      drop.style.boxShadow=`0 0 10px 2px color-mix(in srgb,${col} 50%,transparent)`;
+      L.appendChild(drop);
+      let tgtEl=null;
+      if(atk) tgtEl = ti>=0 ? document.getElementById("foes").children[ti] : document.getElementById("foes");
+      else if(def) tgtEl = document.getElementById("pblk");
+      if(!tgtEl){                                     // 그 밖 — 위로 솟아 터진다
+        fxAnim(drop,[{transform:"translate(0,0) scale(1)"},{transform:"translate(0,-40px) scale(1.4)",opacity:.9}],
+               {duration:420,easing:"cubic-bezier(.3,.6,.4,1)",fill:"forwards"}).onfinish=()=>{ drop.remove(); fxSparkle(L,{x:cx,y:cy-66}); };
+        return;
+      }
+      const tr=tgtEl.getBoundingClientRect(), tx=tr.left+tr.width/2, ty=tr.top+tr.height/2;
+      const dx=tx-cx, dy=ty-(cy-26), ang=Math.atan2(dy,dx)*180/Math.PI;
+      fxAnim(drop,[{transform:`translate(0,0) rotate(${ang}deg)`},
+                   {transform:`translate(${dx*.3}px,${dy*.3}px) rotate(${ang}deg) scale(3,.6)`,offset:.3},
+                   {transform:`translate(${dx}px,${dy}px) rotate(${ang}deg) scale(2.2,.7)`}],
+             {duration:FX_SHOT,easing:"ease-in",fill:"forwards"}).onfinish=()=>{
+        drop.remove();
+        if(!atk){ fxSparkle(L,{x:tx,y:ty}); sfx("block");
+          const b=document.getElementById("pblk");
+          if(b) fxAnim(b,[{transform:"scale(1)",textShadow:"0 0 0 rgba(120,180,240,0)"},{transform:"scale(1.4)",textShadow:"0 0 10px rgba(150,205,250,.9)",offset:.3},
+                          {transform:"scale(1)",textShadow:"0 0 0 rgba(120,180,240,0)"}],{duration:700,easing:"ease-out"}); }
+      };
+    };
+  });
+}
+function fxSparkle(L,p){              // 수비 f1 — 톡 터지는 고리 + 피어오르는 빛 알갱이
+  const pop=el("div","fx-pop"); pop.style.left=(p.x-20)+"px"; pop.style.top=(p.y-20)+"px"; L.appendChild(pop);
+  fxAnim(pop,[{transform:"scale(.3)",opacity:1},{transform:"scale(1.8)",opacity:0}],{duration:420,easing:"ease-out",fill:"both"}).onfinish=()=>pop.remove();
+  for(let i=0;i<14;i++){
+    const s=el("div","fx-spark"), sx=(Math.random()-.5)*90, sz=3+Math.random()*4;
+    s.style.left=p.x+"px"; s.style.top=p.y+"px"; s.style.width=sz+"px"; s.style.height=sz+"px";
+    if(i%3===0) s.style.background="#FFF8DC";
+    L.appendChild(s);
+    fxAnim(s,[{transform:"translate(0,0) scale(.4)",opacity:0},{transform:`translate(${sx*.4}px,-12px) scale(1)`,opacity:1,offset:.2},
+              {transform:`translate(${sx}px,${-46-Math.random()*40}px) scale(.6)`,opacity:0}],
+           {duration:1100+Math.random()*500,delay:Math.random()*200,easing:"ease-out",fill:"both"}).onfinish=()=>s.remove();
+  }
+}
+
+/* ---------- 연출: 카드 테두리 물결 (fx-candidates-7 w4) ----------
+   커서를 올린 손패 카드 뒤에 흰색이 꽉 찬 물결을 그린다. 가장자리는 매끈한 곡선이 둘레를 따라 흐르고,
+   그 위로 밝은 빛 한 줄기가 돈다. 픽셀을 흔드는 필터 대신 매 프레임 곡선을 다시 계산해 깨지지 않는다 */
+/* .wrap 이 흔들리는 동안엔 그 안의 fixed 층이 .wrap 을 기준으로 놓인다 — 화면 왼쪽 위(0,0)에 다시 맞춘다 */
+function fxPin(sv){
+  const o=sv.getBoundingClientRect();
+  if(Math.abs(o.left)>.5) sv.style.left=((parseFloat(sv.style.left)||0)-o.left)+"px";
+  if(Math.abs(o.top)>.5)  sv.style.top =((parseFloat(sv.style.top)||0)-o.top)+"px";
+}
+/* 둥근 사각형 둘레를 N점으로 걷고, 바깥(법선)으로 off + amp·sin 만큼 밀어낸 닫힌 곡선 */
+function wavePath(W,H,R,off,amp,k,ph,N){
+  N=N||160; const pts=[], hw=W/2, hh=H/2, sx=hw-R, sy=hh-R, P=4*(sx+sy)+2*Math.PI*R;
+  const segs=[[2*sx,0,-sx,-hh,1,0,0,-1],[Math.PI/2*R,1,sx,-sy,-Math.PI/2],[2*sy,0,hw,-sy,0,1,1,0],[Math.PI/2*R,1,sx,sy,0],
+              [2*sx,0,sx,hh,-1,0,0,1],[Math.PI/2*R,1,-sx,sy,Math.PI/2],[2*sy,0,-hw,sy,0,-1,-1,0],[Math.PI/2*R,1,-sx,-sy,Math.PI]];
+  for(let i=0;i<N;i++){
+    let d=i/N*P, x=0,y=0,nx=0,ny=0;
+    for(const s of segs){ if(d<=s[0]){ if(!s[1]){ x=s[2]+s[4]*d; y=s[3]+s[5]*d; nx=s[6]; ny=s[7]; }
+        else { const a=s[4]+d/R; x=s[2]+Math.cos(a)*R; y=s[3]+Math.sin(a)*R; nx=Math.cos(a); ny=Math.sin(a); } break; } d-=s[0]; }
+    const w=off+amp*Math.sin(i/N*Math.PI*2*k+ph); pts.push([x+nx*w,y+ny*w]);
+  }
+  let p=`M${(pts[0][0]+pts[N-1][0])/2},${(pts[0][1]+pts[N-1][1])/2}`;
+  for(let i=0;i<N;i++){ const a=pts[i], b=pts[(i+1)%N]; p+=` Q${a[0]},${a[1]} ${(a[0]+b[0])/2},${(a[1]+b[1])/2}`; }
+  return p+"Z";
+}
+/* 흰 물결을 sv 에 list 의 카드마다 그린다 (최대 2장). gid — 빛 그라데이션 id, 층마다 따로 */
+function drawAura(sv,list,t,gid){
+  if(!FX_OK||!list.length){ if(sv.style.display!=="none") sv.style.display="none"; return; }
+  if(!sv.firstChild) sv.innerHTML=`<defs><linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="-80" y1="0" x2="80" y2="0">
+      <stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#FFF6DA" stop-opacity="1"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>`
+    + [0,1].map(()=>`<g><path class="g" fill="rgba(255,255,255,.32)" filter="url(#fxsofter)"/><path class="m" fill="#FFFFFF"/>
+    <path class="h" fill="none" stroke="url(#${gid})" stroke-width="3.5" filter="url(#fxsoft)"/></g>`).join("");
+  sv.style.display="";
+  sv.querySelectorAll("g").forEach((g,i)=>{
+    const c=list[i]; if(!c){ g.style.display="none"; return; }
+    g.style.display="";
+    // 카드가 기울어 있을 수 있다 — 겉 사각형 대신 실제 크기·각도로 그린다
+    const r=c.getBoundingClientRect(), tf=getComputedStyle(c).transform;
+    const m = tf&&tf!=="none" ? new DOMMatrixReadOnly(tf) : new DOMMatrixReadOnly();
+    const sc=Math.hypot(m.a,m.b)||1, ang=Math.atan2(m.b,m.a)*180/Math.PI;
+    const W=c.offsetWidth*sc, H=c.offsetHeight*sc;
+    g.setAttribute("transform",`translate(${r.left+r.width/2},${r.top+r.height/2}) rotate(${ang})`);
+    const d=wavePath(W,H,6,6,2.4,6,-t*2.2);   // 얇게 — 두꺼우면 이웃 카드를 덮는다
+    g.querySelector(".g").setAttribute("d",wavePath(W,H,6,11,3,6,-t*2.2));
+    g.querySelector(".m").setAttribute("d",d); g.querySelector(".h").setAttribute("d",d);
+  });
+  sv.querySelector("#"+gid).setAttribute("gradientTransform",`rotate(${t*1.4*57.3})`);
+}
+(function auraTick(ts){
+  requestAnimationFrame(auraTick);
+  const t=ts/1000;
+  // 손패 — 고른 카드(계속) + 커서를 올린 카드(올린 동안)
+  const sv=document.getElementById("fxaura");
+  if(sv){
+    fxPin(sv);
+    const hand=document.getElementById("hand"), list=[];
+    const sel = (typeof S!=="undefined"&&S&&S.sel!==null&&hand) ? hand.children[S.sel] : null;
+    if(sel) list.push(sel);
+    const hov = hand&&!hand.classList.contains("locked") ? hand.querySelector(".card:hover:not(.no)") : null;
+    if(hov&&hov!==sel) list.push(hov);
+    drawAura(sv,list,t,"fxhl");
+  }
+  // 모닥불 재련 — 고르는 창 안의 층(#fxaura2)에 커서를 올린 카드만
+  const sv2=document.getElementById("fxaura2");
+  if(sv2){
+    const hov=document.querySelector("#pickgrid.forge .card:hover");
+    drawAura(sv2, hov&&!document.getElementById("pickover").hidden ? [hov] : [], t, "fxhl2");
+  }
+})(0);
+
+/* ---------- 연출: 대상 지정 ----------
+   대상이 필요한 카드를 고르면, 그 카드 밑에서 마우스까지 흐르는 점선(둥근 화살촉)이 이어진다.
+   점선은 적 카드 위 · 내 손패 카드 아래에 그린다(#fxaim, z 4). 적 위에 올리면 흰 인장(테두리만)이 정방향으로 쾅 찍힌다 */
+let aimMouse=null, aimFoe=-1, aimSince=0;
+document.addEventListener("mousemove",e=>{ aimMouse={x:e.clientX,y:e.clientY}; });
+function aimCurve(x0,y0,x1,y1){ const mx=(x0+x1)/2, my=Math.min(y0,y1)-70; return `M${x0},${y0} Q${mx},${my} ${x1},${y1}`; }
+function aimStamp(b,k){
+  const pad=7, cx=b.left+b.width/2, cy=b.top+b.height/2, w=b.width+pad*2, h=b.height+pad*2, T=0.14;
+  let s, op;
+  if(k<T){ const q=k/T; s=1.45-0.47*q*q; op=Math.min(1,q*2.2); }
+  else if(k<T+0.1){ const q=(k-T)/0.1; s=0.98+0.04*Math.sin(q*Math.PI); op=1; }
+  else { s=1; op=1; }
+  let g=`<g transform="translate(${cx},${cy}) scale(${s})" opacity="${op}" filter="url(#fxrough)">
+    <rect x="${-w/2}" y="${-h/2}" width="${w}" height="${h}" rx="3" fill="none" stroke="#FFFFFF" stroke-width="3.5"/></g>`;
+  if(k>=T&&k<T+0.45){ const q=(k-T)/0.45;   // 정화의 흰 인장 — 안쪽은 비우고, 찍히는 순간 흰 물방울이 튄다
+    for(let i=0;i<10;i++){ const a=i/10*Math.PI*2+0.3, rx=w/2+4+q*18, ry=h/2+3+q*12;
+      g+=`<circle cx="${cx+Math.cos(a)*rx}" cy="${cy+Math.sin(a)*ry}" r="${2.4*(1-q)}" fill="#FFFFFF" opacity="${1-q}"/>`; } }
+  return g;
+}
+(function aimTick(ts){
+  requestAnimationFrame(aimTick);
+  const line=document.getElementById("fxaim"), mark=document.getElementById("fxaimmark");
+  fxPin(line);
+  if(!line||!mark) return;
+  const off=()=>{ if(line.innerHTML) line.innerHTML=""; if(mark.innerHTML) mark.innerHTML=""; aimFoe=-1; };
+  if(typeof S==="undefined"||!S||S.over||S.busy||S.paused||S.sel===null||!aimMouse) return off();
+  const d=defOf(S.hand[S.sel]); if(!d||!needsTarget(d)) return off();
+  const hc=document.getElementById("hand").children[S.sel]; if(!hc) return off();
+  const cr=hc.getBoundingClientRect(), x0=cr.left+cr.width/2, y0=cr.top+cr.height/2;   // 카드 한가운데 — 카드 밑에서 나온다
+  let snap=null, idx=-1;
+  [...document.getElementById("foes").children].forEach((f,i)=>{
+    if(!f.classList.contains("targetable")) return;
+    const b=f.getBoundingClientRect();
+    if(aimMouse.x>=b.left-4&&aimMouse.x<=b.right+4&&aimMouse.y>=b.top-8&&aimMouse.y<=b.bottom+14){ snap=b; idx=i; }
+  });
+  if(idx!==aimFoe){ aimFoe=idx; aimSince=ts;
+    // 겨눈 적에게 실제로 들어갈 피해로 카드 문구를 바꿔 쓴다. 겨누지 않으면 힘만 반영
+    const cx=hc.querySelector(".ctx"); if(cx) cx.innerHTML=cardTx(S.hand[S.sel], idx>=0?S.foes[idx]:null); }
+  const end = snap ? {x:snap.left+snap.width/2, y:snap.top+snap.height*0.55} : aimMouse;
+  const col = snap ? "#FFF4D6" : "#C9C3B4";
+  line.innerHTML=`<defs><marker id="fxah" viewBox="-6 -6 12 12" refX="0" refY="0" markerWidth="4.2" markerHeight="4.2" orient="auto" markerUnits="strokeWidth">
+    <path d="M-3.5,-3.6 L3.2,0 L-3.5,3.6 Z" fill="${col}" stroke="${col}" stroke-width="2.4" stroke-linejoin="round"/></marker></defs>
+    <path d="${aimCurve(x0,y0,end.x,end.y)}" fill="none" stroke="${col}" stroke-width="4" stroke-linecap="round"
+      stroke-dasharray="2 12" stroke-dashoffset="${-ts/1000*40}" marker-end="url(#fxah)"/>`;
+  mark.innerHTML = snap ? aimStamp(snap,(ts-aimSince)/1000) : "";
+})(0);
+
+/* ---------- 손패 배치 — 슬더슬처럼 겹쳐 부채꼴로 ----------
+   장수가 늘면 겹침이 깊어지고, 가장자리 카드일수록 기울고 조금 내려간다 */
+function layoutHand(hw){
+  const cs=[...hw.children], n=cs.length; if(!n) return;
+  const cw=cs[0].offsetWidth||92, W=hw.clientWidth||cw*n;
+  const step = n>1 ? Math.min(cw-14, (W-cw-16)/(n-1)) : cw;   // 카드 사이 간격(왼쪽 끝끼리)
+  const mid=(n-1)/2, tilt=Math.min(3.2, 22/Math.max(n-1,1));    // 한 장당 기울기(도)
+  cs.forEach((c,i)=>{
+    const k=i-mid;
+    if(i) c.style.marginLeft=(step-cw)+"px";
+    c.style.setProperty("--rot",(k*tilt).toFixed(2)+"deg");
+    c.style.setProperty("--dy",(k*k*tilt*.45).toFixed(1)+"px");
+  });
+}
+/* ---------- 연출: 버린 덱으로 — 카드 사본이 한 장씩 버린 덱에 빨려 들어간다 ----------
+   손패는 곧 다시 그려지므로 지금 모습을 복제해 고정 레이어에 띄운다 */
+function fxDiscard(els,delay0){
+  if(!FX_OK) return;
+  const L=fxLayer(), p=document.getElementById("xpile"); if(!p) return;
+  const q=p.getBoundingClientRect(), qx=q.left+q.width/2, qy=q.top+q.height/2;
+  let n=0;
+  els.forEach(src=>{
+    if(!src) return;
+    const r=src.getBoundingClientRect(), tf=getComputedStyle(src).transform;
+    const m = tf&&tf!=="none" ? new DOMMatrixReadOnly(tf) : new DOMMatrixReadOnly();
+    const sc=Math.hypot(m.a,m.b)||1, ang=Math.atan2(m.b,m.a)*180/Math.PI;
+    const w=src.offsetWidth, h=src.offsetHeight, cx=r.left+r.width/2, cy=r.top+r.height/2;
+    const cl=src.cloneNode(true); cl.classList.remove("sel"); cl.classList.add("fx-fly");
+    Object.assign(cl.style,{left:(cx-w/2)+"px",top:(cy-h/2)+"px",width:w+"px",height:h+"px"});
+    L.appendChild(cl);
+    const delay=delay0+(n++)*70;
+    fxAnim(cl,[{transform:`translate(0,0) rotate(${ang}deg) scale(${sc})`,opacity:1},
+               {transform:`translate(${(qx-cx)*.35}px,${(qy-cy)*.35-30}px) rotate(${ang-8}deg) scale(${sc*.75})`,opacity:1,offset:.35},
+               {transform:`translate(${qx-cx}px,${qy-cy}px) rotate(${ang-24}deg) scale(.2)`,opacity:.3}],
+           {duration:460,delay,easing:"cubic-bezier(.45,0,.7,1)",fill:"both"}).onfinish=()=>{
+      cl.remove();
+      const x=document.getElementById("xpile");
+      if(x) x.animate([{transform:"scale(1)"},{transform:"scale(1.12)"},{transform:"scale(1)"}],{duration:200,easing:"ease-out"});
+    };
+    sfx("toss", delay/FX_SPEED + 230);
+  });
+  if(n) fxUntil=Math.max(fxUntil, performance.now()+(delay0+n*70+460)/FX_SPEED);
+}
+
+/* ---------- 연출: 카드 뽑기 — 뽑을 덱에서 한 장씩 착착 날아 들어온다 ----------
+   카드마다 시작 시각을 적어 두므로, 날아오는 도중에 화면을 다시 그려도 이어서 날아온다 */
+const FX_DEAL_GAP=95, FX_DEAL=340;
+function fxDeal(hw){
+  const now=performance.now(); let k=0, lastEnd=0;
+  S.hand.forEach((c,i)=>{
+    if(c.fxDeal===undefined) return;
+    if(!FX_OK){ delete c.fxDeal; return; }
+    if(c.fxDeal<0){ c.fxDeal=now+(k++)*FX_DEAL_GAP; sfx("deal", c.fxDeal-now+FX_DEAL*.8); }
+    const start=c.fxDeal;
+    if(now>start+FX_DEAL){ delete c.fxDeal; return; }
+    const card=hw.children[i], p=document.getElementById("dpile"); if(!card||!p) return;
+    const r=card.getBoundingClientRect(), q=p.getBoundingClientRect();
+    const dx=(q.left+q.width/2)-(r.left+r.width/2), dy=(q.top+q.height/2)-(r.top+r.height/2);
+    card.animate([{translate:`${dx}px ${dy}px`,scale:.3,rotate:"-28deg",opacity:0},
+                  {opacity:1,offset:.2},
+                  {translate:"0px 0px",scale:1,rotate:"0deg",opacity:1}],
+                 {duration:FX_DEAL,delay:start-now,easing:"cubic-bezier(.2,.8,.3,1)",fill:"backwards"});
+    lastEnd=Math.max(lastEnd,start+FX_DEAL);
+  });
+  if(lastEnd) fxUntil=Math.max(fxUntil,lastEnd);
+}
+
+/* ---------- 소리 — 파일 없이 Web Audio 로 그 자리에서 합성한다 ----------
+   브라우저는 사용자가 한 번 누르기 전엔 소리를 막는다 → 첫 클릭에 깨운다. 켬/끔은 이 브라우저에만 기억 */
+const SFX={on:true,ctx:null,out:null};
+try{ SFX.on = localStorage.getItem("ps-sound")!=="off"; }catch(e){}
+function sfxCtx(){
+  if(!SFX.ctx){
+    const A=window.AudioContext||window.webkitAudioContext; if(!A) return null;
+    SFX.ctx=new A(); SFX.out=SFX.ctx.createGain(); SFX.out.gain.value=SFX.vol; SFX.out.connect(SFX.ctx.destination);
+  }
+  if(SFX.ctx.state==="suspended") SFX.ctx.resume();
+  return SFX.ctx;
+}
+document.addEventListener("pointerdown",()=>{ if(SFX.on) sfxCtx(); });
+function sfxTone(c,at,type,f0,f1,dur,vol){
+  const o=c.createOscillator(), g=c.createGain();
+  o.type=type; o.frequency.setValueAtTime(f0,at); o.frequency.exponentialRampToValueAtTime(Math.max(f1,20),at+dur);
+  g.gain.setValueAtTime(0,at); g.gain.linearRampToValueAtTime(vol,at+.006); g.gain.exponentialRampToValueAtTime(.0001,at+dur);
+  o.connect(g); g.connect(SFX.out); o.start(at); o.stop(at+dur+.02);
+}
+function sfxNoise(c,at,dur,vol,ft,f0,f1,q){
+  const len=Math.ceil(c.sampleRate*dur), b=c.createBuffer(1,len,c.sampleRate), d=b.getChannelData(0);
+  for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
+  const s=c.createBufferSource(), f=c.createBiquadFilter(), g=c.createGain();
+  s.buffer=b; f.type=ft; f.Q.value=q||.7;
+  f.frequency.setValueAtTime(f0,at); if(f1) f.frequency.exponentialRampToValueAtTime(f1,at+dur);
+  g.gain.setValueAtTime(vol,at); g.gain.exponentialRampToValueAtTime(.0001,at+dur);
+  s.connect(f); f.connect(g); g.connect(SFX.out); s.start(at);
+}
+/* 장작 — 낮게 깔리는 불길(걸러낸 잡음) 위로 타닥타닥 튀는 소리를 아무 때나 흩뿌린다 */
+function sfxFire(c,t){
+  const D=2.2;
+  const len=Math.ceil(c.sampleRate*D), b=c.createBuffer(1,len,c.sampleRate), d=b.getChannelData(0);
+  for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
+  const s=c.createBufferSource(), f=c.createBiquadFilter(), g=c.createGain();
+  s.buffer=b; f.type="lowpass"; f.frequency.setValueAtTime(260,t); f.frequency.linearRampToValueAtTime(700,t+.35);
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.22,t+.3); g.gain.setValueAtTime(.22,t+D-.8); g.gain.linearRampToValueAtTime(0,t+D);
+  s.connect(f); f.connect(g); g.connect(SFX.out); s.start(t);
+  for(let i=0;i<26;i++){
+    const at=t+.15+Math.random()*(D-.5), big=Math.random()<.25;
+    sfxNoise(c,at,big?.04:.012+Math.random()*.015,big?.5:.18+Math.random()*.2,"bandpass",1500+Math.random()*3500,0,1.4);
+  }
+}
+/* 모루 — 쇠를 치면 배음이 정수배가 아니라 어긋나게(1 : 2.76 : 5.4 : 8.9) 울린다. 앞에 짧은 쇳소리 */
+function sfxClang(c,t,v){
+  [[1,.24,1.1],[2.76,.14,.75],[5.4,.09,.45],[8.93,.05,.28]].forEach(([r,vol,dec])=>sfxTone(c,t,"sine",640*r,640*r*.995,dec,vol*v));
+  sfxNoise(c,t,.035,.35*v,"highpass",3200);
+}
+function sfx(name,delayMs){
+  if(!SFX.on) return;
+  if(delayMs>0){ setTimeout(()=>sfx(name),delayMs); return; }
+  const c=sfxCtx(); if(!c||c.state!=="running") return;
+  const t=c.currentTime;
+  switch(name){
+    case "deal":   sfxNoise(c,t,.07,.32,"bandpass",2600,1300,.9); sfxTone(c,t+.005,"triangle",360,220,.05,.1); break;   // 착 — 종이 한 장
+    case "fire":   sfxFire(c,t); break;                                                                       // 모닥불 — 장작 타는 소리
+    case "anvil":  sfxClang(c,t,1); sfxClang(c,t+.34,.75); sfxClang(c,t+.62,.45); break;                       // 재련 — 모루 깡 깡 깡
+    case "toss":   sfxNoise(c,t,.09,.2,"bandpass",1800,700,.8); break;                                          // 버린 덱에 툭
+    case "hover":  sfxTone(c,t,"sine",1500,1300,.035,.035); break;
+    case "select": sfxTone(c,t,"triangle",620,900,.07,.11); break;
+    case "shoot":  sfxNoise(c,t,.14,.16,"bandpass",3200,900,1.2); break;                                        // 슝
+    case "drop":   sfxTone(c,t,"sine",950,230,.15,.32); sfxNoise(c,t+.015,.07,.07,"lowpass",1600); break;          // 똑 — 물감 방울
+    case "mix":    sfxTone(c,t,"sine",520,760,.2,.14); sfxTone(c,t+.08,"sine",760,1050,.22,.09); break;          // 섞였다
+    case "black":  sfxTone(c,t,"sine",150,55,.45,.3); sfxNoise(c,t,.35,.14,"lowpass",420); break;                  // 검정 — 무겁게
+    case "hit":    sfxTone(c,t,"sine",160,46,.2,.55); sfxNoise(c,t,.11,.32,"lowpass",2000); break;                 // 퍽
+    case "hurt":   sfxTone(c,t,"square",120,52,.22,.16); sfxNoise(c,t,.2,.3,"lowpass",900); break;
+    case "block":  sfxTone(c,t,"triangle",1150,1100,.26,.11); sfxTone(c,t+.01,"sine",1720,1680,.3,.07); break;     // 팅
+    case "taint":  sfxNoise(c,t,.9,.2,"lowpass",320,110,1); sfxTone(c,t,"sine",95,50,.85,.22); break;              // 스며드는 먹
+  }
+}
+/* 소리 크기 — 0~100. 끄기는 SFX.on. 둘 다 이 브라우저에 기억 */
+SFX.vol=.55; try{ const v=parseFloat(localStorage.getItem("ps-vol")); if(!isNaN(v)) SFX.vol=v; }catch(e){}
+function sfxVol(v){ SFX.vol=v; if(SFX.out) SFX.out.gain.value=v; try{ localStorage.setItem("ps-vol",v); }catch(e){} }
+
+/* ---------- 상단 메뉴 ---------- */
+(function(){
+  const btn=document.getElementById("menubtn"), dd=document.getElementById("menudd");
+  const r=document.getElementById("volr"), rv=document.getElementById("volv"), mu=document.getElementById("volm");
+  const showVol=()=>{ r.value=Math.round(SFX.vol*100); rv.textContent=r.value; mu.textContent=SFX.on?"끄기":"켜기"; r.disabled=!SFX.on; };
+  const close=()=>{ dd.hidden=true; btn.classList.remove("on"); };
+  btn.onclick=e=>{ e.stopPropagation();
+    if(!dd.hidden) return close();
+    const b=btn.getBoundingClientRect(); dd.style.top=(b.bottom+6)+"px"; dd.style.right=(innerWidth-b.right)+"px";
+    showVol(); dd.hidden=false; btn.classList.add("on"); };
+  document.addEventListener("click",e=>{ if(!dd.hidden&&!dd.contains(e.target)) close(); });
+  r.oninput=()=>{ sfxVol(r.value/100); rv.textContent=r.value; };
+  r.onchange=()=>sfx("select");
+  mu.onclick=()=>{ SFX.on=!SFX.on; try{ localStorage.setItem("ps-sound",SFX.on?"on":"off"); }catch(e){} showVol(); if(SFX.on){ sfxCtx(); sfx("select"); } };
+  dd.querySelector('[data-m=tut]').onclick=()=>{ close(); openBook(); };
+  dd.querySelector('[data-m=new]').onclick=()=>{ close(); ask("새 게임을 시작할까요?","지금 여정은 사라지고 처음부터 시작합니다.",()=>{
+    if(S){ S.over=true; S.busy=false; }   // 지난 전투의 남은 타이머가 새 판을 건드리지 않게
+    closeAllOver(); setPhase("내 턴",false); newRun(); }); };
+  dd.querySelector('[data-m=quit]').onclick=()=>{ close(); ask("게임을 종료할까요?","지금 여정을 끝내고 결과 화면으로 갑니다.",quitRun); };
+})();
+/* 확인 창 — 새 게임 · 종료 */
+function ask(h,p,yes){
+  const o=document.getElementById("askover");
+  document.getElementById("askh").textContent=h; document.getElementById("askp").textContent=p;
+  const was=S&&S.paused; if(S) S.paused=true;
+  const done=ok=>{ o.hidden=true; if(S&&!ok) S.paused=was; if(ok) yes(); };
+  document.getElementById("askno").onclick=()=>done(false);
+  document.getElementById("askyes").onclick=()=>done(true);
+  o.hidden=false;
+}
+function closeAllOver(){
+  ["pileover","pickover","rewover","over","mapover","shopover","campover","tutover","bookover","askover"].forEach(id=>{
+    const e=document.getElementById(id); if(e) e.hidden=true; });
+  tutOpen=false; tutQ=[]; tutFigRun++;
+}
+function quitRun(){
+  closeAllOver();
+  if(S){ S.over=true; S.busy=false; S.paused=false; }
+  document.getElementById("ovt").textContent="여정 종료";
+  document.getElementById("ovp").innerHTML=`${RUN.battle}번째 전투에서 여정을 끝냈습니다. 덱 ${RUN.deck.length}장 · ${COIN}${RUN.gold}냥.`;
+  document.getElementById("over").hidden=false;
+}
+
+/* ---------- 튜토리얼 다시 보기 ---------- */
+let bookPaused=false;
+function openBook(){
+  const o=document.getElementById("bookover"), box=document.getElementById("bookbox");
+  const seen=TUT_ORDER.filter(k=>RUN&&RUN.seen[k]);
+  if(S&&!S.over&&!S.paused){ S.paused=true; bookPaused=true; }
+  o.hidden=false;
+  document.getElementById("bookn").textContent = seen.length ? `${seen.length}개 · 게임에서 본 안내만 보입니다` : "";
+  const list=document.getElementById("bookl");
+  const show=(keys,i)=>{
+    const id=keys[i], [h,p]=TUT[id];
+    document.getElementById("bookh").textContent=h; document.getElementById("bookp").innerHTML=p;
+    const fig=document.getElementById("bookfig"); fig.innerHTML=""; fig.className="tutfig"; tutFigRun++;
+    fig.hidden=!TUT_FIG[id]; if(TUT_FIG[id]) TUT_FIG[id](fig,tutFigRun);
+    list.innerHTML=keys.map((k,j)=>`<button type="button" class="${j===i?"on":""}" data-j="${j}"><i>${j+1}</i>${TUT_SHORT[k]}</button>`).join("");
+    list.querySelectorAll("button").forEach(b=>b.onclick=()=>show(keys,+b.dataset.j));
+  };
+  // 크기 고정 — 아직 안 본 안내까지 전부 한 번씩 그려 가장 큰 크기에 맞춘다
+  box.style.height=""; let mh=0;
+  TUT_ORDER.forEach((_,j)=>{ show(TUT_ORDER,j); mh=Math.max(mh,box.offsetHeight); });
+  box.style.height=mh+"px";
+  if(!seen.length){ list.innerHTML=""; document.getElementById("bookh").textContent="아직 본 안내가 없습니다";
+    document.getElementById("bookp").innerHTML="전투를 시작하면 안내가 여기에 하나씩 쌓입니다."; const f=document.getElementById("bookfig"); f.innerHTML=""; f.hidden=true; tutFigRun++; return; }
+  show(seen,0);
+}
+function closeBook(){
+  document.getElementById("bookover").hidden=true; tutFigRun++;
+  if(bookPaused&&S){ S.paused=false; bookPaused=false; render(); if(resumeFn){ const f=resumeFn; resumeFn=null; f(); } }
+}
+let sfxHov=null;   // 손패 카드에 커서가 새로 올라갈 때만 톡
+document.addEventListener("mouseover",e=>{
+  const c=e.target.closest&&e.target.closest("#hand .card");
+  if(c&&c!==sfxHov&&!c.classList.contains("no")&&!c.parentElement.classList.contains("locked")) sfx("hover");
+  sfxHov=c||null;
+});
+
+function fxFlush(){
+  fxComp=0; fxBase=0;                  // 카드 한 장의 저항 정보는 여기까지 — 화상 등 다음 피해에 남기지 않는다
+  if(!fxPending.length) return;
+  const q=fxPending.splice(0);
+  requestAnimationFrame(()=>q.forEach(f=>f()));
+}
+
+function render(){
+  document.getElementById("bn").textContent=RUN.battle;
+  document.getElementById("deckn").textContent=RUN.deck.length;
+  document.getElementById("gn").textContent=RUN.gold;
+  document.getElementById("tn").textContent=S.turn;
+  document.getElementById("php").textContent=S.hp;
+  document.getElementById("pblk").textContent=S.blk;
+  document.getElementById("pnrg").textContent=S.e;
+  document.getElementById("hct").textContent=S.hand.length;
+  document.getElementById("pstat").innerHTML=S.str>0?`<span class="pip str">힘 ${S.str}</span>`:"";
+  document.getElementById("dct").textContent=S.draw.length;
+  document.getElementById("xct").textContent=S.disc.length;
+  document.getElementById("end").disabled=S.busy||S.over||S.paused;
+  const selD=S.sel!==null?defOf(S.hand[S.sel]):null;
+  document.getElementById("endsub").textContent=S.e>0?`기력 ${S.e} 남음`:"";
+  document.getElementById("palhint").textContent =
+    S.sel!==null&&selD.type==="color" ? "놓을 칸을 고르세요"
+    : S.mergeA!==null ? (S.pal.some(s=>s.lock>0)
+        ? "합칠 칸을 고르세요 · 검정 칸을 누르면 버립니다"
+        : "합칠 다른 칸을 고르세요")
+    : "칸을 두 개 눌러 혼합 · 기력 0";
+
+  // foes
+  const fw=document.getElementById("foes"); fw.innerHTML="";
+  S.foes.forEach((f,i)=>{
+    let cls="foe"+(f.hp<=0?" dead":"");
+    if(S.acting){ cls += (S.acting===f.key) ? " acting" : (f.hp>0?" waiting":""); }
+    const d=el("div",cls);
+    if(S.acting===f.key) d.appendChild(el("div","acttag","행동 중 · "+foeAct(f).nm));
+    const needTarget = selD && needsTarget(selD);
+    if(needTarget&&f.hp>0&&!S.busy){ d.classList.add("targetable"); d.onclick=()=>playSelected(i); }
+    d.appendChild(el("div","nm",
+      `<span class="dot" style="background:${pigment(f.col)}"></span>${f.n}`));
+    d.appendChild(el("div","intent",(f.hp>0&&f.intent)?intentText(f):"—"));
+    const hpPct=Math.max(0,Math.min(100,f.hp/f.max*100));
+    const bkPct=Math.max(0,Math.min(100-hpPct,f.blk/f.max*100));
+    const bar=el("div","bar");
+    const hpf=el("div","hpf"); hpf.style.width=hpPct+"%";
+    bar.appendChild(hpf);
+    if(f.blk>0){
+      const bkf=el("div","bkf");
+      bkf.style.left=hpPct+"%"; bkf.style.width=bkPct+"%";
+      bar.appendChild(bkf);
+    }
+    d.appendChild(bar);
+    const hpTxt = f.blk>0
+      ? `${Math.max(0,f.hp)}<span class="bnum">+${f.blk}</span> / ${f.max}`
+      : `${Math.max(0,f.hp)} / ${f.max}`;
+    d.appendChild(el("div","hp",`<span>체력</span><span>${hpTxt}</span>`));
+    const p=el("div","pips");
+    if(f.shell&&f.hp>0) p.appendChild(el("span","pip shell","투명화"));
+    // 꾀어내기처럼 미리 알아야 대비되는 행동은 투명화와 나란히 상시 표시한다
+    if(f.hp>0){
+      const st=FOE[f.id].acts.find(a=>a.steal);
+      if(st) p.appendChild(el("span","pip steal",`${st.nm} · ${CNAME[st.steal]}`));
+    }
+    if(f.vuln>0) p.appendChild(el("span","pip vuln",`취약 ${f.vuln}`));
+    if(f.str>0) p.appendChild(el("span","pip str",`힘 ${f.str}`));
+    if(f.weak>0) p.appendChild(el("span","pip weak",`약화 ${f.weak}`));
+    if(f.burn>0) p.appendChild(el("span","pip burn",`화상 ${f.burnD}·${f.burn}턴`));
+    d.appendChild(p);
+    // 피해 미리보기
+    if(selD&&f.hp>0&&(selD.type==="atk"||selD.type==="skill")&&selD.dmg){
+      let comp=0;
+      if(selD.type==="skill"){ const si=frontSlots(selD.need); if(si) si.forEach(i=>{ comp|=S.pal[i].comp; }); }
+      else { const si=frontSlot(selD.req); if(si>=0) comp=selD.req; }
+      const base = (selD.type==="atk" ? (comp?selD.up:selD.dmg) : selD.dmg)+S.str;
+      const v=calcDmg(base,f,comp);
+      const cls = v<base?"down":(v>base?"up":"same");
+      const hits=selD.hits||1;
+      d.appendChild(el("div","preview "+cls, v+(hits>1?`×${hits}`:"")));
+    }
+    fw.appendChild(d);
+  });
+
+  // palette
+  const pw=document.getElementById("pal"); pw.innerHTML="";
+  // 고른 스킬이 먹어치울 칸들 — 요구색이 여럿이면 여러 칸이 동시에 표시된다
+  const eatSlots = (selD&&selD.type==="skill") ? frontSlots(selD.need) : null;
+  S.pal.forEach((s,i)=>{
+    const d=el("div","slot"+(s.comp===0&&s.lock===0?" empty":""));
+    if(s.comp) d.style.background=pigment(s.comp);
+    if(s.comp===2||s.comp===3) d.classList.add("pale");
+    if(s.lock>0){
+      d.style.background=pigment(7);
+      d.classList.add("locked");
+      const lk=el("div","lock"); lk.innerHTML=lockHTML(s.lock); d.appendChild(lk);
+    } else if(s.comp&&S.wild){          // 심봉사 — 이번 턴은 색이 보이지 않는다
+      d.style.background="#9a9a9a";
+      d.classList.remove("pale");
+      d.appendChild(el("div","tag","?"));
+    } else if(s.comp){
+      d.appendChild(el("div","tag",CNAME[s.comp]));
+    }
+    if(s.cards.length) d.appendChild(el("div","cnt",s.cards.length+"장"));
+    if(selD&&selD.type==="color"){
+      d.classList.add(placeOK(i,selD.comp)?"ok":"bad");
+      if(s.lock>0&&placeOK(i,selD.comp)) d.classList.add("eat");
+    }
+    if(S.mergeA===i) d.classList.add("merge");
+    // 색상 칸을 고른 상태라면 검정 칸이 버릴 곳으로 표시된다
+    if(S.mergeA!==null&&S.mergeA!==i&&s.lock>0) d.classList.add("eat");
+    // 강제 소비될 칸 하이라이트
+    if(selD&&(selD.type==="atk"||selD.type==="def")){
+      if(frontSlot(selD.req)===i) d.classList.add("eat");
+    }
+    if(eatSlots&&eatSlots.indexOf(i)>=0) d.classList.add("eat");
+    d.onclick=()=>clickSlot(i);
+    pw.appendChild(d);
+  });
+
+  // hand
+  const hw=document.getElementById("hand"); hw.innerHTML="";
+  hw.classList.toggle("locked", !!(S.busy||S.over));   // 적 턴 — 손패는 보기만 한다
+  S.hand.forEach((c,i)=>{
+    const d=defOf(c);
+    // 스킬은 기력이 모자랄 때만 회색. 색이 없는 건 눌러서 배우게 둔다
+    const dim = d.type==="skill" ? (d.e>S.e) : !canPlay(c);
+    const card=el("div","card "+paperOf(d)+(S.sel===i?" sel":"")+(dim?" no":"")+(c.hold?" held":"")+(c.upg?" upg":""));
+    const cost=el("div","cost"+(d.e===0?" free":""),d.e);
+    card.appendChild(cost);
+    if(c.hold) card.appendChild(el("div","heldtag","보존"));
+    if(c.vol)  card.appendChild(el("div","heldtag vol","휘발"));
+    card.appendChild(el("div","cnm",dotsHTML(d)+d.n));
+    card.appendChild(el("div","kind",d.kind));
+    card.appendChild(el("div","ctx",cardTx(c,null)));
+    card.onclick=()=>selectCard(i);
+    hw.appendChild(card);
+  });
+  layoutHand(hw);
+  fxDeal(hw);
+
+  // log
+  const lw=document.getElementById("log");
+  lw.innerHTML=S.log.map(l=>`<div class="${l.c}">${l.t}</div>`).join("");
+  lw.scrollTop=lw.scrollHeight;
+  fxFlush();   // 적의 오염처럼 상태만 바뀐 연출은 다시 그린 직후에 튼다
+}
+/* ---------- 덱 열람 ---------- */
+/* 카드 종이 — 색상(하양 포함)은 한지, 나머지는 부적지 */
+function paperOf(d){ return staysInHand(d) ? "hanji" : "bujeok"; }
+function makeCardEl(d){
+  const card=el("div","card "+paperOf(d));
+  card.appendChild(el("div","cost"+(d.e===0?" free":""),d.e));
+  card.appendChild(el("div","cnm",dotsHTML(d)+d.n));
+  card.appendChild(el("div","kind",d.kind));
+  card.appendChild(el("div","ctx",fillTx(d.tx,d)));
+  return card;
+}
+/* 정렬: 색상 → 타격 → 수비 → 스킬, 각 묶음 안에서는 빨·노·파·주·초·보·흰 */
+const TYPEORD={color:0,atk:1,def:2,skill:3};
+const COLORD ={1:0, 2:1, 4:2, 3:3, 6:4, 5:5};   // 빨 노 파 주 초 보
+function colOrd(d){
+  const c = needComps(d)[0] || 0;                // 요구색이 여럿이면 첫 색으로 묶는다
+  return COLORD[c]!==undefined ? COLORD[c] : 9;  // 흰색 등은 맨 뒤
+}
+function showPile(which){
+  const list = which==="draw" ? S.draw : S.disc;
+  const sorted=[...list].sort((x,y)=>{
+    const a=DEF[x.k], b=DEF[y.k];
+    return (TYPEORD[a.type]-TYPEORD[b.type]) || (colOrd(a)-colOrd(b));
+  });
+  document.getElementById("pileh").textContent = which==="draw" ? "뽑을 덱" : "버린 덱";
+  document.getElementById("pilesub").textContent = which==="draw"
+    ? `${list.length}장 · 순서를 알 수 없도록 정렬해 보여줍니다`
+    : `${list.length}장`;
+  const g=document.getElementById("pilegrid"); g.innerHTML="";
+  if(!sorted.length) g.appendChild(el("div","pileempty","비어 있습니다."));
+  else sorted.forEach(c=>g.appendChild(makeCardEl(defOf(c))));
+  document.getElementById("pileover").hidden=false;
+}
+/* 검정 칸 안 — 버린 카드 · 합칠 때 들어간 카드 · 적이 오염시킬 때 원래 있던 카드. 빈칸이 오염됐으면 비어 있다 */
+function showLocked(i){
+  const s=S.pal[i], list=s.cards;
+  const sorted=[...list].sort((x,y)=>{ const a=DEF[x.k], b=DEF[y.k]; return (TYPEORD[a.type]-TYPEORD[b.type]) || (colOrd(a)-colOrd(b)); });
+  document.getElementById("pileh").textContent=`${i+1}번 검정 칸`;
+  document.getElementById("pilesub").textContent = list.length
+    ? `${s.lock}턴 뒤 풀립니다 · ${list.length}장 — 풀리면 버린 덱으로 돌아옵니다`
+    : `${s.lock}턴 뒤 풀립니다`;
+  const g=document.getElementById("pilegrid"); g.innerHTML="";
+  if(!sorted.length) g.appendChild(el("div","pileempty","잠긴 카드 없음"));
+  else sorted.forEach(c=>g.appendChild(makeCardEl(defOf(c))));
+  document.getElementById("pileover").hidden=false;
+}
+function closePile(){ document.getElementById("pileover").hidden=true; }
+
+function finish(win){
+  S.over=true; S.busy=false; S.acting=null; render();
+  if(win){ RUN.hp=S.hp; RUN.rewardFor=RUN.node; later(showReward,700); return; }
+  document.getElementById("ovt").textContent="패배";
+  document.getElementById("ovp").innerHTML=
+    `${RUN.battle}번째 전투에서 쓰러졌습니다. 덱 ${RUN.deck.length}장 · ${COIN}${RUN.gold}냥.`;
+  document.getElementById("over").hidden=false;
+}
+
+/* ---------- 보상 ---------- */
+/* 슬더슬처럼 종류별 항목으로 나열하고, 하나씩 받는다 */
+let REW=[];
+/* 전투 보상 엽전 — 스테이지 표의 gold, 없으면 예전 범위.
+   ?? 대신 평범한 분기로 쓴다 — 구형 브라우저에서 파싱이 깨진다 */
+function stageGold(){
+  const g=(STAGES[RUN.node]||{}).gold;
+  return (g===undefined||g===null) ? 10+(Math.random()*7|0) : g;
+}
+function showReward(){
+  if(RUN.rewardFor!==RUN.node) return;   // 늦게 도착한 타이머 — 이미 다음 칸으로 넘어갔다
+  REW=[
+    {type:"gold",  ic:COIN, amt:stageGold(),                      done:false},
+    {type:"color", ic:"🎨", picks:pickFrom(COLOR_POOL,3),    done:false,
+     nm:"색상 카드", desc:"3장 중 1장을 덱에 넣습니다"},
+    {type:"skill", ic:"✦",  picks:pickFrom(SKILL_POOL,3),    done:false,
+     nm:"스킬 카드", desc:"3장 중 1장을 덱에 넣습니다"}
+  ];
+  document.getElementById("rewtitle").textContent="승리";
+  document.getElementById("rewsub").textContent=
+    `${RUN.battle}번째 전투를 ${S.turn}턴에 정리했습니다 · 남은 체력 ${RUN.hp}`;
+  showRewList();
+  document.getElementById("rewover").hidden=false;
+}
+function rewDeckNote(){
+  document.getElementById("rewdeck").innerHTML=
+    `덱 ${RUN.deck.length}장 · 색상 ${RUN.deck.filter(k=>staysInHand(DEF[k])).length}장 · ${COIN}${RUN.gold}냥`;
+}
+function showRewList(){
+  document.getElementById("rewpick").hidden=true;
+  const box=document.getElementById("rewlist");
+  box.hidden=false; box.innerHTML="";
+  const left=REW.filter(r=>!r.done);
+  if(!left.length){
+    box.appendChild(el("div","rewempty","받을 보상이 없습니다."));
+  }
+  left.forEach(r=>{
+    const b=document.createElement("button");
+    b.className="rewrow";
+    if(r.type==="gold"){
+      b.innerHTML=`<span class="ic">${r.ic}</span>
+        <span class="tx"><b>${COIN}${r.amt}냥</b><span>도깨비 상점에서 카드를 사거나 덱에서 뺄 때 씁니다</span></span>
+        <span class="arw">받기</span>`;
+      b.onclick=()=>{ RUN.gold+=r.amt; r.done=true; say(`${COIN}${r.amt}냥을 얻었습니다.`,"hi"); showRewList(); };
+    } else {
+      b.innerHTML=`<span class="ic">${r.ic}</span>
+        <span class="tx"><b>${r.nm}</b><span>${r.desc}</span></span>
+        <span class="arw">고르기</span>`;
+      b.onclick=()=>showRewPick(r);
+    }
+    box.appendChild(b);
+  });
+  rewDeckNote();
+}
+function showRewPick(r){
+  document.getElementById("rewlist").hidden=true;
+  document.getElementById("rewpick").hidden=false;
+  document.getElementById("picktt").textContent=`${r.nm} — 한 장을 덱에 넣습니다`;
+  const g=document.getElementById("rewcards"); g.innerHTML="";
+  r.picks.forEach(k=>{
+    const card=makeCardEl(DEF[k]);
+    card.onclick=()=>{
+      deckAdd(k); r.done=true;                // 고르면 이 항목은 목록에서 사라진다
+      say(`<b>${DEF[k].n}</b>을(를) 덱에 넣었습니다.`,"hi");
+      showRewList();
+    };
+    g.appendChild(card);
+  });
+  // 돌아가기는 받지 않고 목록으로만 — 항목은 그대로 남는다
+  document.getElementById("rewback").onclick=showRewList;
+}
+function proceed(){
+  document.getElementById("rewover").hidden=true;
+  RUN.rewardFor=-1;
+  RUN.node++; RUN.cleared=RUN.node;
+  if(RUN.node>=STAGES.length) return winRun();
+  RUN.battle++;
+  showMap();
+}
+
+/* ---------- 맵 ---------- */
+const NODEIC={battle:"⚔",shop:"👹",camp:"🔥",boss:"☠"};
+/* 전투에서 대기 중이던 튜토리얼이 맵·상점 위로 튀어나오지 않게 비운다 */
+function clearTutQ(){
+  tutQ=[]; tutOpen=false; resumeFn=null;
+  document.getElementById("tutover").hidden=true;
+}
+function showMap(){
+  clearTutQ();
+  ["pileover","pickover","rewover","over","shopover","campover"].forEach(id=>
+    document.getElementById(id).hidden=true);
+  const row=document.getElementById("maprow"); row.innerHTML="";
+  STAGES.forEach((st,i)=>{
+    if(i>0){
+      const lk=el("div","link"+(i<=RUN.cleared?" done":""));
+      row.appendChild(lk);
+    }
+    const done=i<RUN.cleared, now=i===RUN.cleared;
+    const d=el("div","node"+(st.boss?" boss":"")+(done?" done":now?" now":" locked"));
+    d.appendChild(el("div","tag",done?"완료":now?"여기":"잠김"));
+    d.appendChild(el("div","ic",st.boss?NODEIC.boss:NODEIC[st.type]));
+    d.appendChild(el("div","nnm",st.nm));
+    d.appendChild(el("div","nsub",st.sub));
+    if(now) d.onclick=()=>enterNode(i);
+    row.appendChild(d);
+  });
+  const note=RUN.campNote?RUN.campNote+" ":"";
+  RUN.campNote=null;
+  document.getElementById("mapsub").innerHTML = note +
+    (RUN.cleared>=STAGES.length ? "여정을 마쳤습니다."
+     : `<b>${STAGES[RUN.cleared].nm}</b> 차례입니다. 빛나는 칸을 누르세요. 회색 칸은 아직 갈 수 없습니다.`);
+  document.getElementById("mapstat").innerHTML =
+    `체력 ${RUN.hp}/${RUN.maxHp} · 덱 ${RUN.deck.length}장 · ${COIN}${RUN.gold}냥`;
+  document.getElementById("mapover").hidden=false;
+}
+function enterNode(i){
+  RUN.node=i;
+  document.getElementById("mapover").hidden=true;
+  const t=STAGES[i].type;
+  if(t==="shop") showShop();
+  else if(t==="camp") showCamp();
+  else startBattle();
+}
+function winRun(){
+  clearTutQ();
+  document.getElementById("ovt").textContent="여정 완료";
+  document.getElementById("ovp").innerHTML=
+    `마지막 적을 넘었습니다. 남은 체력 ${RUN.hp}/${RUN.maxHp} · 덱 ${RUN.deck.length}장 · ${COIN}${RUN.gold}냥.`;
+  document.getElementById("over").hidden=false;
+}
+
+/* ---------- 모닥불 — 휴식 또는 재련 ---------- */
+/* 재련한 카드는 인스턴스가 아니라 덱(RUN.upg)에 표시되므로 이 런 내내 유지된다 */
+function forgeCands(){
+  const out=[];
+  RUN.deck.forEach((k,i)=>{
+    // 하양은 재련에서 제외한다 — 강화는 전투 중에 하양 ②로만 걸 수 있다
+    if(DEF[k].type.slice(0,5)==="white") return;
+    // 그 밖에 강화값(upv)이 있는 카드는 전부 — 스킬만이 아니라 타격·수비도 재련할 수 있다
+    if(DEF[k].upv && !RUN.upg[i]) out.push({k,i});
+  });
+  return out;
+}
+function showCamp(){
+  clearTutQ();
+  ["pileover","pickover","rewover","over","mapover","shopover"].forEach(id=>
+    document.getElementById(id).hidden=true);
+  const heal=Math.floor(RUN.maxHp*REST_PCT);
+  const full=RUN.hp>=RUN.maxHp;
+  const cand=forgeCands();
+  document.getElementById("campsub").textContent=
+    `체력 ${RUN.hp}/${RUN.maxHp} · 덱 ${RUN.deck.length}장. 하나만 고를 수 있습니다.`;
+  const row=document.getElementById("camprow"); row.innerHTML="";
+
+  // 체력이 가득해도 휴식은 고를 수 있다 — 회복할 게 없을 뿐, 재련을 건너뛰는 선택지로 남긴다
+  const rest=el("div","campopt");
+  rest.innerHTML=`<div class="ic">🔥</div><div class="cnm2">휴식</div>
+    <div class="cdesc">${full?"체력이 이미 가득합니다<br>쉬고 떠나도 회복은 없습니다":
+      `최대 체력의 30%인 <b>${heal}</b>을 회복합니다<br>${RUN.hp} → ${Math.min(RUN.maxHp,RUN.hp+heal)}`}</div>`;
+  rest.onclick=()=>{
+    const b=RUN.hp; RUN.hp=Math.min(RUN.maxHp,RUN.hp+heal);
+    sfx("fire");
+    leaveCamp(full?"모닥불 곁에서 쉬었습니다. 체력은 이미 가득했습니다.":`휴식으로 체력을 ${RUN.hp-b} 회복했습니다.`);
+  };
+  row.appendChild(rest);
+
+  const forge=el("div","campopt"+(cand.length?"":" no"));
+  forge.innerHTML=`<div class="ic">🔨</div><div class="cnm2">재련</div>
+    <div class="cdesc">${cand.length
+      ? `카드 <b>1장을 영구히 강화</b>합니다<br>강화할 수 있는 카드 ${cand.length}장`
+      : "강화할 수 있는 카드가 없습니다"}</div>`;
+  if(cand.length) forge.onclick=openForge;
+  row.appendChild(forge);
+
+  document.getElementById("campover").hidden=false;
+}
+function openForge(){
+  const cand=forgeCands();
+  document.getElementById("campover").hidden=true;
+  chooser("재련할 카드를 고르세요",
+    "고른 카드는 이 여정이 끝날 때까지 강화된 채로 남습니다. 카드당 한 번만 강화됩니다.",
+    g=>cand.forEach(u=>{
+      const card=makeCardEl(defOf({k:u.k,upg:{scope:"run"}}));
+      card.classList.add("upg");
+      card.onclick=()=>{
+        if(g.dataset.done) return; g.dataset.done="1";   // 연출 중 두 번 누르기 막기
+        RUN.upg[u.i]=true;
+        sfx("anvil");
+        // 하얗게 번쩍 + 빛 알갱이가 피어오른 뒤 떠난다
+        const ms=fxForge(card);
+        setTimeout(()=>{
+          document.getElementById("pickover").hidden=true;
+          leaveCamp(`<b>${DEF[u.k].n}</b>을(를) <b>재련</b>했습니다.`);
+        }, ms);
+      };
+      g.appendChild(card);
+    }),
+    ()=>{ document.getElementById("pickover").hidden=true; showCamp(); });  // 휴식으로 되돌아갈 수 있다
+  const g=document.getElementById("pickgrid"); g.classList.add("forge"); delete g.dataset.done;
+}
+/* 재련 — 고른 카드가 하얗게 번쩍하고, 위로 빛 알갱이가 피어오른다 (후보 r4). 끝나는 시각(ms)을 돌려준다 */
+function fxForge(card){
+  if(!FX_OK) return 0;
+  const L=fxLayer(), r=card.getBoundingClientRect();
+  const fl=el("div","fx-flash"); fxPlace(fl,r); L.appendChild(fl);
+  fl.animate([{opacity:.85},{opacity:0}],{duration:420,easing:"ease-out"}).onfinish=()=>fl.remove();
+  card.animate([{scale:1},{scale:1.14},{scale:1}],{duration:320,easing:"ease-out"});
+  for(let i=0;i<18;i++){
+    const m=el("div","fx-mote"), x=r.left+8+Math.random()*(r.width-16), y=r.top+r.height*(.3+Math.random()*.6);
+    m.style.left=x+"px"; m.style.top=y+"px"; L.appendChild(m);
+    m.animate([{transform:"translate(0,0) scale(1)",opacity:0},{opacity:1,offset:.2},
+               {transform:`translate(${(Math.random()-.5)*22}px,-${50+Math.random()*40}px) scale(.4)`,opacity:0}],
+              {duration:800+Math.random()*300,delay:Math.random()*260,easing:"ease-out",fill:"both"}).onfinish=()=>m.remove();
+  }
+  return 900;
+}
+function leaveCamp(msg){
+  document.getElementById("campover").hidden=true;
+  document.getElementById("pickover").hidden=true;
+  RUN.campNote=msg;
+  RUN.node++; RUN.cleared=RUN.node;
+  if(RUN.node>=STAGES.length) return winRun();
+  showMap();
+}
+
+/* ---------- 상인 ---------- */
+/* 🚨 가격은 전부 [임시]입니다 */
+const SHOP_PRICE={color:22,skill:38,remove:30};
+/* [임시] 희귀 카드 가격 — 분류 문구(kind)에 "희귀"가 들어간 카드에 적용 */
+const SHOP_PRICE_RARE={color:40,skill:65};
+function priceOf(it){
+  const rare=(DEF[it.k].kind||"").indexOf("희귀")>=0;
+  return rare&&SHOP_PRICE_RARE[it.type]!==undefined ? SHOP_PRICE_RARE[it.type] : SHOP_PRICE[it.type];
+}
+let SHOPWARE=null;
+function showShop(){
+  clearTutQ();
+  ["pileover","pickover","rewover","over","mapover"].forEach(id=>
+    document.getElementById(id).hidden=true);
+  if(!SHOPWARE||SHOPWARE.node!==RUN.node){
+    SHOPWARE={node:RUN.node, sold:{}, rmDone:false,
+      items:[...pickFrom(COLOR_POOL,2).map(k=>({k,type:"color"})),
+             ...pickFrom(SKILL_POOL,3).map(k=>({k,type:"skill"}))]};
+  }
+  drawShop();
+  document.getElementById("shopover").hidden=false;
+}
+function drawShop(){
+  document.getElementById("shopsub").innerHTML =
+    `${COIN}${RUN.gold}냥 · 덱 ${RUN.deck.length}장. 살 것을 고르고 떠나면 됩니다.`;
+  const buy=document.getElementById("shopbuy");
+  buy.innerHTML="<h4>카드 구매</h4>";
+  const row=el("div","shoprow");
+  SHOPWARE.items.forEach((it,idx)=>{
+    const p=priceOf(it), sold=!!SHOPWARE.sold[idx], can=!sold&&RUN.gold>=p;
+    const box=el("div","buyitem"+(sold?" sold":can?" can":" no"));
+    box.appendChild(el("div","price",sold?"판매됨":COIN+p+"냥"));
+    const card=makeCardEl(DEF[it.k]);
+    if(can) card.onclick=()=>{
+      RUN.gold-=p; deckAdd(it.k); SHOPWARE.sold[idx]=true;
+      drawShop();
+    };
+    box.appendChild(card);
+    row.appendChild(box);
+  });
+  buy.appendChild(row);
+
+  const rm=document.getElementById("shoprm");
+  rm.innerHTML="<h4>카드 제거</h4>";
+  if(SHOPWARE.rmDone){
+    rm.appendChild(el("div","pileempty","이번 도깨비 상점에서는 이미 한 장을 뺐습니다."));
+  } else if(RUN.gold<SHOP_PRICE.remove){
+    rm.appendChild(el("div","pileempty",
+      `${COIN}${SHOP_PRICE.remove}냥이 필요합니다. 지금 ${RUN.gold}냥 있습니다.`));
+  } else {
+    const b=document.createElement("button");
+    b.className="go";
+    b.innerHTML=`덱에서 한 장 빼기 — ${COIN}${SHOP_PRICE.remove}냥`;
+    b.onclick=openRemove;
+    rm.appendChild(b);
+  }
+}
+function backToShop(){
+  document.getElementById("pickover").hidden=true;
+  drawShop();
+  document.getElementById("shopover").hidden=false;
+}
+function openRemove(){
+  const seen={}, uniq=[];
+  RUN.deck.forEach((k,i)=>{ if(!seen[k]){ seen[k]=true; uniq.push({k,i}); } });
+  document.getElementById("shopover").hidden=true;
+  chooser("뺄 카드를 고르세요",
+    `${COIN}${SHOP_PRICE.remove}냥이 듭니다. 같은 카드가 여럿이면 한 장만 빠집니다.`,
+    g=>uniq.forEach(u=>{
+      const card=makeCardEl(DEF[u.k]);
+      const n=RUN.deck.filter(x=>x===u.k).length;
+      if(n>1) card.appendChild(el("div","heldtag",n+"장"));
+      card.onclick=()=>{                      // 고르는 이 순간에 엽전이 빠진다
+        RUN.gold-=SHOP_PRICE.remove;
+        deckRemoveAt(RUN.deck.indexOf(u.k));
+        SHOPWARE.rmDone=true;
+        backToShop();
+      };
+      g.appendChild(card);
+    }),
+    backToShop);                              // 고르기 전이면 엽전을 그대로 두고 물러선다
+}
+function leaveShop(){
+  document.getElementById("shopover").hidden=true;
+  RUN.node++; RUN.cleared=RUN.node;
+  if(RUN.node>=STAGES.length) return winRun();
+  showMap();
+}
+document.getElementById("end").onclick=endTurn;
+document.getElementById("tutx").onclick=closeTut;
+document.getElementById("tutok").onclick=tutNext;
+document.getElementById("tutprev").onclick=()=>tutShow(tutI-1);
+// 좌우로 밀어 넘기기
+(function(){ const b=document.getElementById("tutbox"); let sx=null;
+  b.addEventListener("pointerdown",e=>{ sx=e.clientX; });
+  b.addEventListener("pointerup",e=>{ if(sx===null) return; const dx=e.clientX-sx; sx=null;
+    if(Math.abs(dx)>60){ if(dx<0&&tutI<tutPages.length-1) tutShow(tutI+1); else if(dx>0) tutShow(tutI-1); } });
+})();
+document.getElementById("dpile").onclick=()=>showPile("draw");
+document.getElementById("xpile").onclick=()=>showPile("disc");
+document.getElementById("pilex").onclick=closePile;
+document.getElementById("bookx").onclick=closeBook;
+document.getElementById("bookover").onclick=e=>{ if(e.target.id==="bookover") closeBook(); };
+document.getElementById("pileover").onclick=e=>{
+  if(e.target.id==="pileover") closePile();     // 바깥을 누르면 닫힘
+};
+document.addEventListener("keydown",e=>{
+  if(tutOpen&&e.key==="Escape") closeTut();
+  else if(tutOpen&&e.key==="Enter") tutNext();
+  else if(tutOpen&&e.key==="ArrowRight"&&tutI<tutPages.length-1) tutShow(tutI+1);
+  else if(tutOpen&&e.key==="ArrowLeft") tutShow(tutI-1);
+  else if(e.key==="Escape"&&!document.getElementById("bookover").hidden) closeBook();
+  else if(e.key==="Escape") closePile();
+});
+document.getElementById("rewgo").onclick=proceed;
+document.getElementById("shopgo").onclick=leaveShop;
+document.getElementById("again").onclick=()=>{
+  document.getElementById("over").hidden=true;
+  setPhase("내 턴",false);
+  newRun();
+};
+newRun();
+</script>
