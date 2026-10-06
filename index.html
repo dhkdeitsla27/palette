@@ -34,6 +34,9 @@ body{background:var(--ground);color:var(--ink);font-family:var(--sans);
   .board{grid-template-columns:minmax(0,1fr)}
   .logcol{position:static;height:180px;min-height:0}
 }
+/* 임베드 안(노션 등) — 화면을 통째로 줄여 넣으므로, 창이 좁아도 넓은 배치를 그대로 쓴다 */
+html.framed .board{grid-template-columns:minmax(0,1fr) 270px}
+html.framed .logcol{position:sticky;height:700px;min-height:0;max-height:none}
 
 /* header */
 .top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
@@ -887,6 +890,16 @@ window.addEventListener("error",function(e){
 </script>
 
 <script>
+/* 임베드에서 화면을 통째로 줄이면(zoom) 브라우저가 돌려주는 좌표는 줄어든 화면 기준이고, 연출은 원래 크기 기준으로 그린다.
+   그 비율(ZF)만큼 좌표를 되돌려 연출 위치가 어긋나지 않게 한다. 일반 웹페이지에서는 ZF=1 이라 아무 일도 하지 않는다 */
+let ZF=1;
+(function(){
+  const gb=Element.prototype.getBoundingClientRect;
+  Element.prototype.getBoundingClientRect=function(){ const r=gb.call(this); return ZF===1?r:new DOMRect(r.x/ZF,r.y/ZF,r.width/ZF,r.height/ZF); };
+  ["clientX","clientY"].forEach(k=>{ const d=Object.getOwnPropertyDescriptor(MouseEvent.prototype,k);
+    Object.defineProperty(MouseEvent.prototype,k,{configurable:true,get(){ const v=d.get.call(this); return ZF===1?v:v/ZF; }}); });
+})();
+
 "use strict";
 const R=1,Y=2,B=4;
 const CNAME={0:"",1:"빨강",2:"노랑",4:"파랑",3:"주황",6:"초록",5:"보라",7:"검정"};
@@ -1482,6 +1495,7 @@ function banner(title,html,isNew){
      hp     체력                   nm    화면에 뜨는 행동 이름
      col    색 (저항 판정용)        w     고를 가중치
      shell  투명화 패시브 여부
+     shellMax 투명화로 얻는 방어도 상한 (없으면 SHELL_MAX = 6) — 적마다 다르게 줄 때
      first  1턴에 반드시 할 행동 키   dmg   피해 · hits 타격 횟수
      repeat true면 같은 행동이         str   자기 힘 +N (누적된다)
             연달아 나와도 막지 않음    blk   자기 방어도 +N
@@ -2193,7 +2207,8 @@ function playSelected(foeIdx){
   // 투명화 패시브(내부 키 shell) — 모든 타격이 끝난 뒤 판정
   dealt.forEach((amt,f)=>{
     if(amt>0&&f.shell&&f.hp>0){
-      const g=Math.min(amt,SHELL_MAX);   // 받은 피해만큼, 최대 SHELL_MAX
+      const cap=FOE[f.id].shellMax ?? SHELL_MAX;   // 적마다 다를 수 있다 — 없으면 6
+      const g=Math.min(amt,cap);                   // 받은 피해만큼, 최대 cap
       f.shell=false; f.blk+=g;
       say(`${f.n}이(가) 투명해져 방어도 ${g}를 얻었습니다.`,"bad");
       tut("shell");
@@ -3772,5 +3787,16 @@ document.getElementById("again").onclick=()=>{
   setPhase("내 턴",false);
   showTitle();                                     // 다시 하기 — 시작 화면으로
 };
+/* 임베드(노션 등) 안에서 열렸을 때 — 게임 화면 전체가 창 안에 다 들어오도록 통째로 줄인다.
+   그냥 웹페이지로 열면 지금처럼 창 크기에 따라 배치가 바뀐다 */
+(function(){
+  let inFrame=false; try{ inFrame=window.self!==window.top; }catch(e){ inFrame=true; }
+  if(!inFrame) return;
+  const DW=1280, DH=820;                            // 기록창까지 옆에 붙는 넓은 배치 기준
+  document.documentElement.classList.add("framed");
+  const fit=()=>{ const z=Math.min(1,innerWidth/DW,innerHeight/DH); document.documentElement.style.zoom=z; ZF=z; };
+  fit(); addEventListener("resize",fit);
+})();
 showTitle();
+
 </script>
