@@ -1935,12 +1935,12 @@ function clickSlot(i){
   if(S.mergeA===i){S.mergeA=null;render();return;}
   const a=S.pal[S.mergeA], b=S.pal[i];
   if(a.comp & b.comp){ say("성분이 겹쳐 혼합할 수 없습니다.",""); S.mergeA=null; render(); return; }
-  const lo=Math.min(S.mergeA,i), hi=Math.max(S.mergeA,i);
+  // 먼저 누른 칸(src)의 물감이 두 번째로 누른 칸(dst)으로 날아가 섞인다 — 결과는 두 번째 칸에 남고 먼저 누른 칸이 빈다
+  const src=S.mergeA, dst=i, lo=dst;
   const comp=a.comp|b.comp, cards=[...a.cards,...b.cards];
-  // 연출용 — 결과는 앞 칸(lo)에 남으므로 뒤 칸(hi)의 물감이 앞 칸으로 날아간다
-  const fxFrom=slotEl(hi)&&slotEl(hi).getBoundingClientRect(), fxFromC=S.pal[hi].comp, fxToC=S.pal[lo].comp;
-  S.pal[lo]={comp,cards,lock:0};
-  S.pal[hi]=slot();
+  const fxFrom=slotEl(src)&&slotEl(src).getBoundingClientRect(), fxFromC=S.pal[src].comp, fxToC=S.pal[dst].comp;
+  S.pal[dst]={comp,cards,lock:0};
+  S.pal[src]=slot();
   if(comp===7){ S.pal[lo].lock=cards.length;
     say(`혼합으로 검정이 생겼습니다. ${cards.length}장이 들어가 ${cards.length}턴 잠김.`,"bad");
     tut("black");
