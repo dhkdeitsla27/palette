@@ -472,6 +472,29 @@ body{background:var(--ground);color:var(--ink);font-family:var(--sans);
 .tutfig .slot .tag{z-index:2}
 .tutfig .card.mini{transform:scale(.7);transform-origin:0 0}
 .tutfig.tall{height:214px}
+/* 안내 본문 — 이름 칸을 맞춘 줄 */
+.tutbox p .tl,.bookbox .bkc p .tl{display:grid;grid-template-columns:52px 1fr;gap:4px;margin-bottom:5px}
+.tutbox p .tl.w,.bookbox .bkc p .tl.w{grid-template-columns:86px 1fr}
+.tutbox p .tl .k,.bookbox .bkc p .tl .k{color:var(--flag)}
+/* 상태창 그림 */
+.tutfig .mebar{position:absolute;left:50%;top:44px;transform:translateX(-50%);display:flex;gap:18px;align-items:center;background:var(--surface);
+  border:1px solid var(--rule);border-radius:4px;padding:9px 14px;white-space:nowrap}
+.tutfig .mst{display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums;padding:3px 6px;border-radius:4px;transition:box-shadow .2s,opacity .2s}
+.tutfig .mlab{font-size:11px;color:var(--muted)}
+.tutfig .mval{font-size:17px;font-weight:600}
+.tutfig .mst.hl{box-shadow:0 0 0 2px #FFF4D6}
+.tutfig .mebar.focus .mst:not(.hl){opacity:.35}
+/* 카드 보는 법 그림 — 손패처럼 비용 동그라미를 왼쪽 위에 */
+.tutfig.hs2 .card .cost{right:auto;left:-7px}
+.tutfig.hs2 .card .cnm{padding-left:12px}
+.tutfig .crow3{display:flex;justify-content:center;gap:14px;align-items:flex-start}
+.tutfig .ccol{display:flex;flex-direction:column;align-items:center;gap:6px;width:96px}
+.tutfig .ccol .cw{position:relative;width:83px;height:119px}
+.tutfig .ccol .cw .card{position:absolute;left:0;top:0;transform:scale(.9);transform-origin:0 0}
+.tutfig .ccol .t{font-size:11.5px;font-weight:700;color:var(--ink);text-align:center}
+.tutfig .ccol .u{font-size:10.5px;color:var(--ink-2);text-align:center;line-height:1.45}
+.tutfig .chip2{display:inline-block;font-size:10px;padding:0 6px;border-radius:999px;background:#33343A;color:var(--ink-2);margin:1px}
+.tutfig .chip2.e{color:var(--nrg)} .tutfig .chip2.c{color:var(--flag)}
 .tutfig .card.sel{border-color:#fff;box-shadow:0 0 0 3px #FFF4D6}
 .tutfig .card.dim{opacity:.4;filter:saturate(.5)}
 .tutfig .card.lit{box-shadow:0 0 0 3px #FFF4D6,0 0 18px 4px rgba(255,255,255,.35)}
@@ -1011,22 +1034,27 @@ const START=["cR","cR","cR","cY","cY","cY","cB","cB","cB",
 
 /* ---------- 튜토리얼 ---------- */
 const TUT={
-  block:  ["방어도는 한 턴만 간다",
-    "방어도만큼 받는 피해가 줄어듭니다. 피해가 방어도보다 크면 <b>넘친 만큼만</b> 체력이 깎입니다.<br><br>"+
-    "남은 방어도는 <b>다음 턴에 사라집니다.</b>"],
-  place:  ["색을 놓는 법",
-    "색상 카드를 고른 뒤 <b>안료접시 칸</b>을 누르면 색이 놓입니다. 색상 카드는 <b>기력을 쓰지 않습니다.</b>"],
+  block:  ["상태창 — 체력 · 방어도 · 기력",
+    `<span class="tl"><b class="k" style="color:var(--hp)">체력</b><span>0이 되면 쓰러집니다.</span></span>`+
+    `<span class="tl"><b class="k" style="color:var(--blk)">방어도</b><span>받는 피해를 먼저 막습니다. 피해가 더 크면 <b>넘친 만큼만</b> 체력이 깎입니다.</span></span>`+
+    `<span class="tl"><b class="k" style="color:var(--nrg)">기력</b><span>매 턴 <b>3</b>이 채워지고, 카드 왼쪽 위 숫자만큼 씁니다.</span></span><br>`+
+    "<b>방어도와 기력은 다음 턴으로 넘어가지 않습니다.</b>"],
+  cards:  ["카드 보는 법",
+    `<span class="tl w"><b class="k">색상</b><span>기력 0. 안료접시에 색을 놓습니다. 턴이 끝나도 손에 남습니다.</span></span>`+
+    `<span class="tl w"><b class="k">타격 · 수비</b><span>기력 1. 안료접시에 맞는 색이 있으면 <b>자동으로 소비</b>해 더 강해집니다.</span></span>`+
+    `<span class="tl w"><b class="k">스킬</b><span>이름 옆 색의 칸이 안료접시에 <b>있어야</b> 쓸 수 있고, 쓰면 그 칸을 소비합니다.</span></span><br>`+
+    "카드 <b>왼쪽 위 숫자</b>가 쓰는 기력입니다. 이름 옆 <b>점</b>은 그 카드가 쓰는 색입니다."],
+  place:  ["안료접시 쓰는 법",
+    `<span class="tl w"><b class="k">① 카드 → 칸</b><span>색이 놓입니다. 색이 있으면 섞입니다.</span></span>`+
+    `<span class="tl w"><b class="k">② 칸 → 칸</b><span>색이 옮겨 갑니다. 색이 있으면 섞입니다. 같은 칸을 다시 누르면 취소됩니다.</span></span><br>`+
+    "색을 놓거나 옮길 때 <b>기력은 소모하지 않습니다.</b>"+
+    `<span class="tipln">TIP · 색 조합은 <b>3원색 그림</b>(오른쪽 색상표)을 참고하세요!</span>`],
   consume:["색은 자동으로 쓰인다",
     "타격·수비는 <b>안료접시에 맞는 색이 있으면 알아서 소비하고 더 강해집니다.</b> 따로 고를 필요는 없습니다.<br><br>"+
     "카드를 고르면 <b>어느 칸이 쓰일지</b> 테두리로 보입니다."],
   keep:   ["색상 카드는 손에 남는다",
     "턴이 끝나면 <b>색상 카드만 손에 남고</b> 나머지는 버린 덱으로 갑니다.<br><br>"+
     "다음 턴에도 카드는 5장을 뽑지만, <b>손패는 최대 10장</b>이라 손이 가득 차면 더 들어오지 않습니다."],
-  merge:  ["색을 섞는 법",
-    "<b>① 칸 두 개를 차례로 누르면</b> 두 칸의 색이 하나로 합쳐지고, <b>한 칸이 빕니다.</b><br>"+
-    "<b>② 색이 든 칸에 색상 카드를 놓아도</b> 바로 섞입니다.<br><br>"+
-    "어느 쪽이든 <b>기력은 들지 않습니다.</b> 놓을 자리가 없으면 <b>칸끼리 섞어</b> 자리를 만들거나, 카드를 써서 칸을 비우세요."+
-    `<span class="tipln">TIP · 색 조합은 <b>3원색 그림</b>(오른쪽 색상표)을 참고하세요!</span>`],
   overlap:["같은 색이 든 칸에는 놓을 수 없다",
     "칸에 이미 든 색과 <b>같은 색이 섞여 있으면</b> 놓을 수도, 합칠 수도 없습니다. 빨강 칸에는 <b>빨강도, 주황도</b> 못 놓습니다. 주황에 빨강이 들어 있기 때문입니다.<br><br>"+
     "<b>혼합색끼리도 합칠 수 없습니다.</b>"],
@@ -1048,9 +1076,9 @@ const TUT={
     "<b>손패나 안료접시에 있는 노랑은 가져가지 못합니다.</b>"]
 };
 /* 안내 순서 — 넘겨 읽는 창과 「튜토리얼 다시 보기」 목록이 이 순서를 따른다. 기본부터 앞에 */
-const TUT_ORDER=["block","place","consume","keep","merge","overlap","resist","needcolor","black","shell","steal"];
+const TUT_ORDER=["block","cards","place","consume","keep","overlap","resist","needcolor","black","shell","steal"];
 /* 다시 보기 목록에만 쓰는 짧은 이름 (5자 이내). 눌렀을 때 내용은 TUT 그대로 */
-const TUT_SHORT={block:"방어도",place:"색을 놓는 법",consume:"색 사용",keep:"색상 카드",merge:"색을 섞는 법",
+const TUT_SHORT={block:"상태창",cards:"카드",place:"안료접시",consume:"색 사용",keep:"색상 카드",
   overlap:"혼합 불가",resist:"악귀 색 저항",needcolor:"스킬 조건",black:"검정 칸",shell:"투명화",steal:"꾀어내기"};
 let tutQ=[], tutOpen=false, resumeFn=null;
 
@@ -1139,52 +1167,60 @@ const tf={
 };
 const TUT_FIG={
   // 색을 놓는 법 — 색상 카드를 고르고 빈칸을 누르면, 카드가 물방울이 되어 칸에 떨어진다
-  place(fig,run){
-    const card=makeCardEl(DEF.cR); fig.appendChild(card);
-    const [s1]=tf.pal(fig,2), cap=tf.cap(fig), ok=()=>run===tutFigRun;
-    cap.textContent="색상 카드를 고르고 → 빈칸을 누른다";
-    tf.loop(run,async()=>{
-      tf.show(card); tf.clear(s1); card.classList.remove("sel");
-      await tf.wait(300); if(!ok()) return false;
-      card.classList.add("sel"); tf.lift(card); await tf.wait(600); if(!ok()) return false;
-      await tf.tap(fig,s1); if(!ok()) return false;
-      card.classList.remove("sel");
-      await tf.useCard(fig,card,s1,R); if(!ok()) return false;
-      tf.paint(s1,R); s1.animate([{transform:"scale(1)"},{transform:"scale(.94)"},{transform:"scale(1.05)"},{transform:"scale(1)"}],{duration:380});
-    },1500);
+  // 상태창 (S1) — 체력 → 방어도 → 기력 칸에 차례로 불이 들어오며 한 줄씩 뜻을 알려 준다
+  block(fig,run){
+    fig.innerHTML=`<div class="mebar"><span class="mst s-hp"><span class="mlab">체력</span><span class="mval" style="color:var(--hp)">80</span><span class="mlab">/ 80</span></span>
+      <span class="mst s-bk"><span class="mlab">방어도</span><span class="mval" style="color:var(--blk)">0</span></span>
+      <span class="mst s-ng"><span class="mlab">기력</span><span class="mval" style="color:var(--nrg)">3</span><span class="mlab">/ 3</span></span></div><div class="cap"></div>`;
+    const bar=fig.querySelector(".mebar"), cap=fig.querySelector(".cap");
+    const seq=[["s-hp","체력 — 0이 되면 쓰러진다"],["s-bk","방어도 — 받는 피해를 먼저 막는다"],["s-ng","기력 — 매 턴 3, 카드를 쓰면 줄어든다"]];
+    let k=0;
+    tf.loop(run,async()=>{ const [c,tx]=seq[k++%3]; bar.classList.add("focus");
+      bar.querySelectorAll(".mst").forEach(s=>s.classList.toggle("hl",s.classList.contains(c))); cap.textContent=tx;
+      bar.querySelector("."+c).animate([{scale:1},{scale:1.08},{scale:1}],{duration:400}); },1700);
   },
-  // 색을 섞는 법 — ① 칸 두 개 → ② 색이 든 칸에 카드, 번갈아
-  merge(fig,run){
-    const card=makeCardEl(DEF.cB); card.style.opacity="0"; fig.appendChild(card);
+  // 카드 보는 법 (K1) — 색상 · 타격 · 스킬 세 장을 나란히, 아래에 기력과 소모. 움직임 없음
+  cards(fig){
+    fig.classList.add("flat","hs2");
+    const cols=[["cR","색상",`<span class="chip2 e">기력 0</span><br>색을 놓는다`],
+                ["aR","타격 · 수비",`<span class="chip2 e">기력 1</span><span class="chip2 c">색 있으면 소비</span>`],
+                ["sO","스킬",`<span class="chip2 e">기력 2</span><span class="chip2 c">색 칸 꼭 필요</span>`]];
+    fig.innerHTML=`<div class="crow3">${cols.map(([k,tt,u])=>`<div class="ccol"><div class="cw"></div><div class="t">${tt}</div><div class="u">${u}</div></div>`).join("")}</div>`;
+    fig.querySelectorAll(".cw").forEach((w,i)=>w.appendChild(makeCardEl(DEF[cols[i][0]])));
+  },
+  // 안료접시 쓰는 법 (X) — ① 카드 → 빈칸(놓기) · ② 칸 → 색이 든 칸(섞기), 번갈아
+  place(fig,run){
+    const card=makeCardEl(DEF.cR); card.style.opacity="0"; fig.appendChild(card);
     const [s1,s2]=tf.pal(fig,2), cap=tf.cap(fig), ok=()=>run===tutFigRun;
     const pal=fig.querySelector(".pal");
     const center=on=>{ pal.style.left=on?"50%":""; pal.style.right=on?"auto":""; pal.style.transform=on?"translateX(-50%)":""; };
     let k=0;
     tf.loop(run,async()=>{
       if(k++%2===0){
-        card.style.opacity="0"; center(true);   // ① 카드가 없으니 칸 두 개를 가운데에
-        tf.paint(s1,R); tf.paint(s2,Y); cap.textContent="① 칸 두 개를 차례로 누르면 합쳐지고 한 칸이 빈다";
-        await tf.tap(fig,s1); if(!ok()) return false;
-        await tf.tap(fig,s2); if(!ok()) return false;
-        const f=tf.fly(fig,s1,s2,R,40); tf.clear(s1); await f; if(!ok()) return false;
-        tf.pop(fig,s2,CNAME[R|Y]+"!"); await tf.bloom(s2,R|Y); if(!ok()) return false; tf.paint(s2,R|Y);
-      } else {
-        center(false); tf.show(card); card.classList.remove("sel");   // ② 카드 왼쪽 · 칸 오른쪽
-        tf.paint(s1,Y); tf.clear(s2); cap.textContent="② 색이 든 칸에 색상 카드를 놓아도 섞인다";
+        center(false); tf.show(card); card.classList.remove("sel"); tf.clear(s1); tf.clear(s2);
+        cap.textContent="① 카드 → 빈칸 · 색이 놓인다";
         await tf.wait(300); if(!ok()) return false;
         card.classList.add("sel"); tf.lift(card); await tf.wait(600); if(!ok()) return false;
         await tf.tap(fig,s1); if(!ok()) return false;
         card.classList.remove("sel");
-        await tf.useCard(fig,card,s1,B); if(!ok()) return false;
-        tf.pop(fig,s1,CNAME[Y|B]+"!"); await tf.bloom(s1,Y|B); if(!ok()) return false; tf.paint(s1,Y|B);
+        await tf.useCard(fig,card,s1,R); if(!ok()) return false;
+        tf.paint(s1,R); s1.animate([{transform:"scale(1)"},{transform:"scale(.94)"},{transform:"scale(1.05)"},{transform:"scale(1)"}],{duration:380});
+      } else {
+        card.style.opacity="0"; center(true);   // 카드가 없는 장면은 칸 두 개를 가운데에
+        tf.paint(s1,R); tf.paint(s2,Y); cap.textContent="② 칸 → 색이 든 칸 · 섞인다";
+        await tf.tap(fig,s1); if(!ok()) return false;
+        await tf.tap(fig,s2); if(!ok()) return false;
+        const f=tf.fly(fig,s1,s2,R,40); tf.clear(s1); await f; if(!ok()) return false;
+        tf.pop(fig,s2,CNAME[R|Y]+"!"); await tf.bloom(s2,R|Y); if(!ok()) return false; tf.paint(s2,R|Y);
       }
     },1500);
   },
-  // 같은 색이 든 칸 — 세 장면, 1.25배 빠르게
   overlap(fig,run){
     const SP=1.25;
     const card=makeCardEl(DEF.cR); fig.appendChild(card);
     const [s1,s2]=tf.pal(fig,2), cap=tf.cap(fig), ok=()=>run===tutFigRun;
+    const pal=fig.querySelector(".pal");
+    const center=on=>{ pal.style.left=on?"50%":""; pal.style.right=on?"auto":""; pal.style.transform=on?"translateX(-50%)":""; };
     let k=0;
     const refuse=async(from,to,c)=>{ const d=el("div","drop"); d.style.background=pigment(c); fig.appendChild(d);
       const p=tf.pos(fig,from), q=tf.pos(fig,to), x0=p.x+p.w/2-11, y0=p.y+Math.min(p.h/2,40)-11, x1=q.x+q.w/2-11, y1=q.y-16;
@@ -1194,13 +1230,13 @@ const TUT_FIG={
     tf.loop(run,async()=>{
       const m=k++%3;
       if(m===0){
-        card.style.opacity="1"; tf.paint(s1,R); tf.clear(s2);
+        card.style.opacity="1"; center(false); tf.paint(s1,R); tf.clear(s2);
         cap.textContent="빨강 칸에 빨강은 못 놓는다";
         tf.lift(card); await tf.wait(450/SP); if(!ok()) return false;
         tf.pop(fig,s1,"✕ 겹침",true);
         const r1=refuse(card,s1,R); tf.shake(s1); await r1; if(!ok()) return false;
       } else {
-        card.style.opacity="0";
+        card.style.opacity="0"; center(true);   // 카드가 없는 두 장면은 칸 두 개를 가운데에
         if(m===1){ tf.paint(s1,R|Y); tf.paint(s2,R); cap.textContent="주황에는 빨강이 들어 있어 빨강 칸과 합칠 수 없다"; }
         else     { tf.paint(s1,R|Y); tf.paint(s2,Y|B); cap.textContent="혼합색끼리도 합칠 수 없다"; }
         await tf.tap(fig,s1,SP); if(!ok()) return false;
@@ -1511,7 +1547,7 @@ function startBattle(){
   say(`<b>${st.nm}</b> — ${st.intro}`,"hi");
   startTurn(true);
   // 전투 시작 안내 — 기본 일곱 가지를 한 창에서 넘겨 읽는다 (순서는 TUT_ORDER)
-  ["block","place","consume","keep","merge","overlap","resist"].forEach(tut);
+  ["block","cards","place","consume","keep","overlap","resist"].forEach(tut);   // 상태창 → 카드 보는 법 → 안료접시 쓰는 법 → …
   // 훔치는 적이 있으면 맞기 전에 미리 알려준다 — 안료접시로 지킬 수 있어야 전략이 된다
   if(S.foes.some(f=>FOE[f.id].acts.some(a=>a.steal))) tut("steal");
 }
@@ -1929,8 +1965,19 @@ function clickSlot(i){
     S.pal[S.mergeA]=slot();
     S.mergeA=null; tut("black"); render(); return;
   }
+  // 빈칸 — 먼저 고른 칸이 있으면 그 색을 빈칸으로 옮긴다 (기력 0). 물감이 물방울로 날아가 떨어진다
+  if(s.comp===0){
+    if(S.mergeA===null) return;
+    const src=S.mergeA, a=S.pal[src];
+    const fxFrom=slotEl(src)&&slotEl(src).getBoundingClientRect();
+    S.pal[i]={comp:a.comp,cards:a.cards,lock:0};
+    S.pal[src]=slot();
+    say(`${src+1}번 칸의 <b>${CNAME[a.comp]}</b>을(를) ${i+1}번 빈칸으로 옮겼습니다.`,"");
+    S.mergeA=null; render();
+    fxPaint(fxFrom,i,a.comp,0,a.comp);
+    return;
+  }
   // 혼합
-  if(s.comp===0) return;
   if(S.mergeA===null){S.mergeA=i;render();return;}
   if(S.mergeA===i){S.mergeA=null;render();return;}
   const a=S.pal[S.mergeA], b=S.pal[i];
@@ -2971,9 +3018,9 @@ function render(){
   document.getElementById("palhint").textContent =
     S.sel!==null&&selD.type==="color" ? "놓을 칸을 고르세요"
     : S.mergeA!==null ? (S.pal.some(s=>s.lock>0)
-        ? "합칠 칸을 고르세요 · 검정 칸을 누르면 버립니다"
-        : "합칠 다른 칸을 고르세요")
-    : "칸을 두 개 눌러 혼합 · 기력 0";
+        ? "합칠 칸이나 옮길 빈칸을 고르세요 · 검정 칸을 누르면 버립니다 · 같은 칸을 다시 누르면 취소"
+        : "합칠 칸이나 옮길 빈칸을 고르세요 · 같은 칸을 다시 누르면 취소")
+    : "칸을 두 개 눌러 혼합 · 빈칸으로 옮기기 · 기력 0";
 
   // foes
   const fw=document.getElementById("foes"); fw.innerHTML="";
