@@ -1049,12 +1049,6 @@ const TUT={
     `<span class="tl w"><b class="k">② 칸 → 칸</b><span>색이 옮겨 갑니다. 색이 있으면 섞입니다. 같은 칸을 다시 누르면 취소됩니다.</span></span><br>`+
     "색을 놓거나 옮길 때 <b>기력은 소모하지 않습니다.</b>"+
     `<span class="tipln">TIP · 색 조합은 <b>3원색 그림</b>(오른쪽 색상표)을 참고하세요!</span>`],
-  consume:["색은 자동으로 쓰인다",
-    "타격·수비는 <b>안료접시에 맞는 색이 있으면 알아서 소비하고 더 강해집니다.</b> 따로 고를 필요는 없습니다.<br><br>"+
-    "카드를 고르면 <b>어느 칸이 쓰일지</b> 테두리로 보입니다."],
-  keep:   ["색상 카드는 손에 남는다",
-    "턴이 끝나면 <b>색상 카드만 손에 남고</b> 나머지는 버린 덱으로 갑니다.<br><br>"+
-    "다음 턴에도 카드는 5장을 뽑지만, <b>손패는 최대 10장</b>이라 손이 가득 차면 더 들어오지 않습니다."],
   overlap:["같은 색이 든 칸에는 놓을 수 없다",
     "칸에 이미 든 색과 <b>같은 색이 섞여 있으면</b> 놓을 수도, 합칠 수도 없습니다. 빨강 칸에는 <b>빨강도, 주황도</b> 못 놓습니다. 주황에 빨강이 들어 있기 때문입니다.<br><br>"+
     "<b>혼합색끼리도 합칠 수 없습니다.</b>"],
@@ -1076,9 +1070,9 @@ const TUT={
     "<b>손패나 안료접시에 있는 노랑은 가져가지 못합니다.</b>"]
 };
 /* 안내 순서 — 넘겨 읽는 창과 「튜토리얼 다시 보기」 목록이 이 순서를 따른다. 기본부터 앞에 */
-const TUT_ORDER=["block","cards","place","consume","keep","overlap","resist","needcolor","black","shell","steal"];
+const TUT_ORDER=["block","cards","place","overlap","resist","needcolor","black","shell","steal"];
 /* 다시 보기 목록에만 쓰는 짧은 이름 (5자 이내). 눌렀을 때 내용은 TUT 그대로 */
-const TUT_SHORT={block:"상태창",cards:"카드",place:"안료접시",consume:"색 사용",keep:"색상 카드",
+const TUT_SHORT={block:"상태창",cards:"카드",place:"안료접시",
   overlap:"혼합 불가",resist:"악귀 색 저항",needcolor:"스킬 조건",black:"검정 칸",shell:"투명화",steal:"꾀어내기"};
 let tutQ=[], tutOpen=false, resumeFn=null;
 
@@ -1244,36 +1238,6 @@ const TUT_FIG={
         tf.pop(fig,s2,"✕ 겹침",true); await Promise.all([tf.shake(s1),tf.shake(s2)]); if(!ok()) return false;
       }
     },1300/SP);
-  },
-  // 색은 자동으로 쓰인다 — 색이 없으면 6, 맞는 색이 있으면 자동으로 소비하고 9
-  consume(fig){
-    fig.classList.add("flat");
-    const card=makeCardEl(DEF.aR); card.classList.add("st");
-    fig.innerHTML=`<div class="crow"><div class="ccard"></div><div class="cases">
-      <div class="case"><span class="slot empty sm"></span><span class="op">→</span><b>6</b><span>피해</span></div>
-      <div class="case"><span class="slot sm eat" style="background:${pigment(R)}"></span><span class="op">→</span><b class="up">9</b><span>피해 · 빨강 자동 소비</span></div>
-    </div></div><div class="cap">안료접시에 빨강이 없을 때 / 있을 때</div>`;
-    fig.querySelector(".ccard").appendChild(card);
-  },
-  // 색상 카드는 손에 남는다 — 턴이 끝나면 색상 카드만 남고 나머지는 버린 덱으로
-  keep(fig,run){
-    const keys=["cR","aR","dR"], cards=keys.map((k,i)=>{ const c=makeCardEl(DEF[k]); c.classList.add("mini"); c.style.left=(22+i*70)+"px"; fig.appendChild(c); return c; });
-    const pile=el("div","tpile"); pile.innerHTML=`<b>0</b>버린 덱`; fig.appendChild(pile);
-    const cap=tf.cap(fig), ok=()=>run===tutFigRun;
-    tf.loop(run,async()=>{
-      cards.forEach(c=>{ c.style.opacity="1"; }); pile.querySelector("b").textContent="0";
-      cap.textContent="턴 종료"; await tf.wait(700); if(!ok()) return false;
-      let n=0;
-      for(const c of cards.slice(1)){
-        const p=tf.pos(fig,c), q=tf.pos(fig,pile);
-        await c.animate([{translate:"0 0",opacity:1},{translate:`${q.x+q.w/2-p.x-p.w/2}px ${q.y+q.h/2-p.y-p.h/2}px`,opacity:0,scale:.4}],
-          {duration:420,easing:"ease-in"}).finished; if(!ok()) return false;
-        c.style.opacity="0"; pile.querySelector("b").textContent=++n;
-        pile.animate([{scale:1},{scale:1.12},{scale:1}],{duration:200});
-      }
-      cap.textContent="색상 카드만 손에 남는다";
-      cards[0].animate([{translate:"0 0"},{translate:"0 -8px"},{translate:"0 0"}],{duration:600});
-    },1800);
   },
   // 악귀의 색 저항 — 빨간 악귀에 빨강 → 주황 → 파랑 공격을 차례로 대 본다
   resist(fig,run){
@@ -1547,7 +1511,7 @@ function startBattle(){
   say(`<b>${st.nm}</b> — ${st.intro}`,"hi");
   startTurn(true);
   // 전투 시작 안내 — 기본 일곱 가지를 한 창에서 넘겨 읽는다 (순서는 TUT_ORDER)
-  ["block","cards","place","consume","keep","overlap","resist"].forEach(tut);   // 상태창 → 카드 보는 법 → 안료접시 쓰는 법 → …
+  ["block","cards","place","overlap","resist"].forEach(tut);   // 상태창 → 카드 보는 법 → 안료접시 쓰는 법 → …
   // 훔치는 적이 있으면 맞기 전에 미리 알려준다 — 안료접시로 지킬 수 있어야 전략이 된다
   if(S.foes.some(f=>FOE[f.id].acts.some(a=>a.steal))) tut("steal");
 }
