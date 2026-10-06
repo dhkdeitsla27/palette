@@ -219,6 +219,61 @@ body{background:var(--ground);color:var(--ink);font-family:var(--sans);
 .hand.locked .card:hover{transform:translateY(var(--dy,0px)) rotate(var(--rot,0deg));box-shadow:none;z-index:5}
 .hand.locked .card:hover::after{content:none}
 /* 소리 켬/끔 */
+/* 시작 화면 */
+#titleover{position:fixed;inset:0;z-index:90;overflow:hidden;touch-action:none;user-select:none;cursor:default}
+#titleover[hidden]{display:none}
+.tbg{position:absolute;inset:0;pointer-events:none}
+.tbg.new{filter:none}
+.v-vig{background:radial-gradient(ellipse at 50% 45%,#2E3036 0%,#1C1D21 50%,#0B0B0D 100%)}
+.v-night{background:radial-gradient(ellipse at 50% 30%,#1C2438 0%,#111726 55%,#0A0E18 100%)}
+.v-plum{background:radial-gradient(ellipse at 50% 35%,#2A1F2E 0%,#1A141E 60%,#100C13 100%)}
+.v-paper{background:#1A1A1C}
+.v-paper::before{content:"";position:absolute;inset:0;opacity:.5;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .55  0 0 0 0 .5  0 0 0 0 .45  0 0 0 .22 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+.tedge{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 48%,transparent 0 46%,rgba(0,0,0,.55) 74%,rgba(0,0,0,.92) 100%)}
+.tballs{position:absolute;inset:0;width:100%;height:100%}
+.taura{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;overflow:visible;z-index:2}
+.thead{position:absolute;left:0;right:0;top:14%;text-align:center;pointer-events:none}
+.tttl{font-family:var(--serif);font-weight:700;font-size:clamp(34px,6vw,60px);margin:0;letter-spacing:.02em;text-shadow:0 2px 14px rgba(0,0,0,.75),0 0 2px rgba(0,0,0,.6)}
+.ttsub{font-size:14px;color:var(--ink);text-shadow:0 1px 8px rgba(0,0,0,.8)}
+.tfoot{position:absolute;left:0;right:0;bottom:12px;text-align:center;font-size:11px;color:var(--muted);pointer-events:none}
+.thand{position:absolute;left:0;right:0;bottom:12%;display:flex;justify-content:center}   /* z-index 를 주지 않는다 — 주면 커진 카드가 물결 아래로 깔린다 */
+.tcard{width:118px;min-height:164px;border-radius:6px;border:1px solid var(--hanji-rule);background:var(--hanji);color:var(--hanji-ink);
+  padding:10px 9px;position:relative;display:flex;flex-direction:column;gap:5px;cursor:pointer;flex:none;text-align:left;
+  transform-origin:50% 100%;transform:translateY(var(--dy,0px)) rotate(var(--rot,0deg));transition:transform .14s ease-out,box-shadow .14s;z-index:1;
+  box-shadow:0 4px 14px rgba(0,0,0,.35)}
+.tcard .ic{position:absolute;top:-11px;left:-11px;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
+  background:var(--hanji-2);border:2px solid var(--hanji-ink);color:var(--hanji-ink)}
+.tcard .ic svg{width:17px;height:17px;display:block}
+.tcard .nm{font-weight:700;font-size:14.5px;padding-left:16px;line-height:1.3}
+.tcard .kd{font-size:10.5px;letter-spacing:.04em;opacity:.7}
+.tcard .tx{font-size:11.5px;line-height:1.45;opacity:.85}
+.tcard:hover{transform:translateY(-8px) rotate(0deg) scale(1.22);z-index:3;box-shadow:0 14px 28px rgba(0,0,0,.6)}
+.tcard:hover::after{content:"";position:absolute;left:0;right:0;top:100%;height:44px}
+.tink{position:absolute;border-radius:50%;pointer-events:none;z-index:1}
+.tpanel{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,#000 55%,transparent);padding:16px}
+.tpanel[hidden]{display:none}
+.tbox{background:var(--surface);border:2px solid var(--flag);border-radius:6px;padding:20px 24px;width:min(460px,100%);position:relative;max-height:86vh;overflow:auto}
+.tbox h3{margin:0 0 12px;font-family:var(--serif);font-size:19px;color:var(--flag)}
+.tbox .x{position:absolute;top:8px;right:10px;width:28px;height:28px;border:0;background:none;color:var(--muted);font-size:17px;cursor:pointer;border-radius:4px}
+.tbox .x:hover{background:var(--surface-2);color:var(--ink)}
+.tstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.tstats div{background:var(--surface-2);border-radius:5px;padding:8px 10px;text-align:center}
+.tstats b{display:block;font-size:20px;color:var(--ink)}
+.tstats span{font-size:11px;color:var(--muted)}
+.trec{width:100%;border-collapse:collapse;font-size:12.5px}
+.trec td,.trec th{border-bottom:1px solid var(--rule);padding:5px 6px;text-align:left}
+.trec th{color:var(--muted);font-weight:600}
+.tset{display:flex;flex-direction:column;gap:12px}
+.tset .row{display:flex;align-items:center;gap:10px;font-size:13.5px}
+.tset input[type=range]{flex:1;accent-color:var(--flag)}
+.tbtn{font:inherit;font-size:13px;font-weight:600;padding:7px 14px;border-radius:4px;border:1px solid var(--rule-2);background:var(--surface-2);color:var(--ink);cursor:pointer}
+.tbtn:hover{border-color:var(--flag);color:var(--flag)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:95;background:var(--surface);border:1px solid var(--flag);color:var(--ink);
+  padding:8px 16px;border-radius:999px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.toast[hidden]{display:none}
+#bookover{z-index:96}
+#askover{z-index:97}
 .menubtn{font:inherit;font-size:12px;padding:2px 11px;border-radius:999px;border:1px solid var(--rule-2);
   background:transparent;color:var(--ink);cursor:pointer}
 .menubtn:hover,.menubtn.on{border-color:var(--flag);color:var(--flag)}
@@ -613,6 +668,7 @@ body{background:var(--ground);color:var(--ink);font-family:var(--sans);
     <feGaussianBlur stdDeviation="1"/>
   </filter>
   <filter id="fxsoft" color-interpolation-filters="sRGB" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.2"/></filter>
+  <filter id="tglow" color-interpolation-filters="sRGB" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="5"/></filter>
   <filter id="fxsofter" color-interpolation-filters="sRGB" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="6"/></filter>
   <filter id="fxrough" color-interpolation-filters="sRGB" x="-20%" y="-20%" width="140%" height="140%">
     <feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="2" seed="5"/>
@@ -779,7 +835,7 @@ body{background:var(--ground);color:var(--ink);font-family:var(--sans);
   <button type="button" data-m="tut">📖 튜토리얼 다시 보기</button>
   <div class="vol"><span>🔊 소리</span><input type="range" id="volr" min="0" max="100" aria-label="소리 크기"><b id="volv"></b><button type="button" id="volm">끄기</button></div>
   <button type="button" data-m="new">↻ 새 게임</button>
-  <button type="button" data-m="quit">⏻ 종료</button>
+  <button type="button" data-m="quit">💾 저장하기</button>
 </div>
 <!-- 튜토리얼 다시 보기 — 왼쪽 목록(짧은 이름) + 오른쪽 내용. 크기는 모든 안내 중 가장 큰 것에 맞춰 고정 -->
 <div class="pileover" id="bookover" hidden>
@@ -794,6 +850,19 @@ body{background:var(--ground);color:var(--ink);font-family:var(--sans);
   <div class="box"><h2 id="askh"></h2><p id="askp"></p>
     <button id="askno" class="sub2">취소</button> <button id="askyes">확인</button></div>
 </div>
+<!-- 시작 화면 — 떠다니는 3원색(누르면 튕김 · 길게 눌러 새총) · 손패 모양 메뉴 카드 -->
+<div id="titleover" hidden>
+  <div class="tbg cur v-vig"></div>
+  <div class="tedge"></div>
+  <svg class="tballs"></svg>
+  <svg id="titleaura" class="taura"></svg>
+  <div class="thead"><h1 class="tttl">그림 그리는 무당</h1><div class="ttsub">색을 섞어 싸우는 덱빌딩 로그라이크</div></div>
+  <div class="thand" id="titlecards"></div>
+  <div class="tfoot">프로토타입 · 1인 개발</div>
+  <!-- 전적 · 설정 창 -->
+  <div class="tpanel" id="tpanel" hidden><div class="tbox"><button class="x" id="tpx" aria-label="닫기">✕</button><h3 id="tph"></h3><div id="tpb"></div></div></div>
+</div>
+<div class="toast" id="toast" hidden></div>
 <div class="over" id="over" hidden>
   <div class="box">
     <h2 id="ovt"></h2>
@@ -2684,6 +2753,10 @@ function drawAura(sv,list,t,gid){
     if(hov&&hov!==sel) list.push(hov);
     drawAura(sv,list,t,"fxhl");
   }
+  // 시작 화면 메뉴 카드
+  const sv3=document.getElementById("titleaura");
+  if(sv3){ const to=document.getElementById("titleover"), hv=to.hidden?null:to.querySelector(".tcard:hover");
+    drawAura(sv3, hv&&document.getElementById("tpanel").hidden?[hv]:[], t, "fxhl3"); }
   // 모닥불 재련 — 고르는 창 안의 층(#fxaura2)에 커서를 올린 카드만
   const sv2=document.getElementById("fxaura2");
   if(sv2){
@@ -2894,10 +2967,10 @@ function sfxVol(v){ SFX.vol=v; if(SFX.out) SFX.out.gain.value=v; try{ localStora
   r.onchange=()=>sfx("select");
   mu.onclick=()=>{ SFX.on=!SFX.on; try{ localStorage.setItem("ps-sound",SFX.on?"on":"off"); }catch(e){} showVol(); if(SFX.on){ sfxCtx(); sfx("select"); } };
   dd.querySelector('[data-m=tut]').onclick=()=>{ close(); openBook(); };
-  dd.querySelector('[data-m=new]').onclick=()=>{ close(); ask("새 게임을 시작할까요?","지금 여정은 사라지고 처음부터 시작합니다.",()=>{
+  dd.querySelector('[data-m=new]').onclick=()=>{ close(); ask("새 게임을 시작할까요?","지금 여정은 사라지고 시작 화면으로 돌아갑니다. 저장한 여정도 지워집니다.",()=>{
     if(S){ S.over=true; S.busy=false; }   // 지난 전투의 남은 타이머가 새 판을 건드리지 않게
-    closeAllOver(); setPhase("내 턴",false); newRun(); }); };
-  dd.querySelector('[data-m=quit]').onclick=()=>{ close(); ask("게임을 종료할까요?","지금 여정을 끝내고 결과 화면으로 갑니다.",quitRun); };
+    saveClear(); showTitle(); }); };
+  dd.querySelector('[data-m=quit]').onclick=()=>{ close(); saveAndTitle(); };
 })();
 /* 확인 창 — 새 게임 · 종료 */
 function ask(h,p,yes){
@@ -2910,9 +2983,54 @@ function ask(h,p,yes){
   o.hidden=false;
 }
 function closeAllOver(){
-  ["pileover","pickover","rewover","over","mapover","shopover","campover","tutover","bookover","askover"].forEach(id=>{
+  ["pileover","pickover","rewover","over","mapover","shopover","campover","tutover","bookover","askover","tpanel"].forEach(id=>{
     const e=document.getElementById(id); if(e) e.hidden=true; });
   tutOpen=false; tutQ=[]; tutFigRun++;
+}
+/* ---------- 저장 · 이어하기 ----------
+   이 브라우저(localStorage)에만 남는다. 지도·상점·모닥불에서는 지도로, 전투 중이면 그 전투 그 자리로 돌아온다 */
+const SAVE_KEY="ps-save", REC_KEY="ps-records";
+function saveGet(){ try{ const s=localStorage.getItem(SAVE_KEY); return s?JSON.parse(s):null; }catch(e){ return null; } }
+function saveClear(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+function toast(msg,ms){ const t=document.getElementById("toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>{ t.hidden=true; },ms||2200); }
+function saveNow(){
+  const vis=id=>!document.getElementById(id).hidden;
+  let where="battle";
+  if(vis("mapover")||vis("shopover")||vis("campover")) where="map";
+  if(!S||S.over) where="map";
+  const data={v:1, at:Date.now(), where, RUN, S:where==="battle"?S:null, SHOPWARE, uid};
+  try{ localStorage.setItem(SAVE_KEY,JSON.stringify(data)); return true; }catch(e){ return false; }
+}
+function saveAndTitle(){
+  if(!RUN) return showTitle();
+  if(!document.getElementById("rewover").hidden){ toast("보상을 받은 뒤에 저장할 수 있습니다"); return; }
+  if(!document.getElementById("pickover").hidden){ toast("고르는 중에는 저장할 수 없습니다"); return; }
+  if(S&&S.busy&&!S.over){                          // 적 턴 — 내 턴이 오면 저장한다
+    toast("적 턴이 끝나면 저장합니다",3000);
+    const k=setInterval(()=>{ if(!S||!S.busy||S.over){ clearInterval(k); saveAndTitle(); } },150); return;
+  }
+  const ok=saveNow();
+  if(S){ S.over=true; S.busy=false; S.paused=false; }
+  showTitle();
+  toast(ok?"저장했습니다":"이 화면에서는 저장할 수 없습니다 (브라우저가 저장을 막았습니다)");
+}
+function loadSave(){
+  const d=saveGet(); if(!d) return;
+  closeAllOver();
+  RUN=d.RUN; SHOPWARE=d.SHOPWARE||null; uid=Math.max(uid,d.uid||0); REW=[]; pickRetain=null;
+  document.getElementById("titleover").hidden=true; titleBalls.stop();
+  if(d.where==="battle"&&d.S){
+    S=d.S; S.busy=false; S.paused=false; S.sel=null; S.mergeA=null; S.acting=null;
+    setPhase("내 턴",false); render();
+  } else { S=null; showMap(); }
+}
+/* ---------- 전적 — 여정이 끝날 때마다 쌓인다 ---------- */
+function recGet(){ try{ return JSON.parse(localStorage.getItem(REC_KEY)||"[]"); }catch(e){ return []; } }
+function recAdd(result){
+  if(!RUN) return;
+  const list=recGet(); list.unshift({at:Date.now(), result, battle:RUN.battle, node:RUN.node, deck:RUN.deck.length, gold:RUN.gold});
+  try{ localStorage.setItem(REC_KEY,JSON.stringify(list.slice(0,50))); }catch(e){}
+  saveClear();                                     // 끝난 여정의 저장은 지운다
 }
 function quitRun(){
   closeAllOver();
@@ -2921,6 +3039,153 @@ function quitRun(){
   document.getElementById("ovp").innerHTML=`${RUN.battle}번째 전투에서 여정을 끝냈습니다. 덱 ${RUN.deck.length}장 · ${COIN}${RUN.gold}냥.`;
   document.getElementById("over").hidden=false;
 }
+
+/* ══════════ 시작 화면 ══════════
+   메뉴 카드: 게임 시작 · 이어하기(저장이 있을 때만) · 전적 보기 · 설정. 손패처럼 부채꼴, 커서를 올리면 떠오르고 흰 물결.
+   배경: 빨강·노랑·파랑 원이 따로 떠다니고, 겹친 자리는 섞인 색. 톡 누르면 튕기고 잉크가 튄다 · 길게 누르면 새총처럼 당겨 쏜다.
+   쏜 공 색으로 배경이 먹처럼 번지며 바뀐다 (파랑 → 밤하늘 · 빨강 → 먹자주 · 노랑 → 먹 + 한지 결) */
+const TICON={
+  start:`<svg viewBox="0 0 16 16"><path d="M4.6 2.6 13 8 4.6 13.4Z" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>`,
+  cont:`<svg viewBox="0 0 16 16"><path d="M8 2.2a5.8 5.8 0 1 1-5.6 7.3h2.3A3.6 3.6 0 1 0 5.5 5.3L7.4 7.2H2.2V2l1.8 1.8A5.8 5.8 0 0 1 8 2.2Z" fill="currentColor"/></svg>`,
+  rec:`<svg viewBox="0 0 16 16" fill="currentColor"><rect x="2.2" y="8.5" width="3" height="5.3" rx=".8"/><rect x="6.5" y="2.5" width="3" height="11.3" rx=".8"/><rect x="10.8" y="5.8" width="3" height="8" rx=".8"/></svg>`,
+  set:`<svg viewBox="0 0 16 16"><path fill="currentColor" fill-rule="evenodd" d="M6.8 1.2h2.4l.4 1.9c.4.1.8.3 1.2.5l1.6-1.1 1.7 1.7-1.1 1.6c.2.4.4.8.5 1.2l1.9.4v2.4l-1.9.4c-.1.4-.3.8-.5 1.2l1.1 1.6-1.7 1.7-1.6-1.1c-.4.2-.8.4-1.2.5l-.4 1.9H6.8l-.4-1.9c-.4-.1-.8-.3-1.2-.5l-1.6 1.1-1.7-1.7 1.1-1.6c-.2-.4-.4-.8-.5-1.2l-1.9-.4V6.8l1.9-.4c.1-.4.3-.8.5-1.2L1.9 3.6l1.7-1.7 1.6 1.1c.4-.2.8-.4 1.2-.5ZM8 5.6a2.4 2.4 0 1 0 0 4.8 2.4 2.4 0 0 0 0-4.8Z"/></svg>`,
+};
+function showTitle(){
+  closeAllOver(); clearTutQ();
+  if(S){ S.over=true; S.busy=false; }
+  const o=document.getElementById("titleover"); o.hidden=false;
+  document.getElementById("tpanel").hidden=true;
+  const has=!!saveGet();
+  const cards=[["start","게임 시작","새 여정","처음부터 새 여정을 떠납니다.",titleStart],
+               has&&["cont","이어하기","저장한 곳부터","저장한 자리에서 다시 시작합니다.",loadSave],
+               ["rec","전적 보기","기록","지금까지의 여정과 가장 멀리 간 곳.",showRecords],
+               ["set","설정","소리 · 안내","소리 크기와 튜토리얼 다시 보기.",showSettings]].filter(Boolean);
+  const h=document.getElementById("titlecards"); h.innerHTML="";
+  cards.forEach(([ic,nm,kd,tx,fn])=>{ const c=el("div","tcard",`<span class="ic">${TICON[ic]}</span><div class="nm">${nm}</div><div class="kd">${kd}</div><div class="tx">${tx}</div>`);
+    c.onclick=()=>{ sfx("select"); fn(); }; h.appendChild(c); });
+  const cs=[...h.children], n=cs.length, cw=118, step=cw-10, mid=(n-1)/2, tilt=3.2;   // 게임 손패와 같은 부채꼴
+  cs.forEach((c,i)=>{ const k=i-mid; if(i) c.style.marginLeft=(step-cw)+"px"; c.style.setProperty("--rot",(k*tilt)+"deg"); c.style.setProperty("--dy",(k*k*tilt*.45)+"px"); });
+  titleBalls.start();
+}
+function titleStart(){
+  const go=()=>{ saveClear(); document.getElementById("titleover").hidden=true; titleBalls.stop(); setPhase("내 턴",false); newRun(); };
+  if(saveGet()) ask("새 여정을 시작할까요?","저장한 여정은 사라집니다.",go); else go();
+}
+function tPanel(h,html){ document.getElementById("tph").textContent=h; document.getElementById("tpb").innerHTML=html; document.getElementById("tpanel").hidden=false; }
+function showRecords(){
+  const list=recGet(), wins=list.filter(r=>r.result==="완주").length, best=list.reduce((m,r)=>Math.max(m,r.battle||0),0);
+  const fmt=ms=>{ const d=new Date(ms); return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; };
+  tPanel("전적",`<div class="tstats"><div><b>${list.length}</b><span>여정</span></div><div><b>${wins}</b><span>완주</span></div><div><b>${best||"-"}</b><span>가장 멀리 간 전투</span></div></div>`+
+    (list.length?`<table class="trec"><tr><th>날짜</th><th>결과</th><th>전투</th><th>덱</th><th>엽전</th></tr>${list.slice(0,10).map(r=>`<tr><td>${fmt(r.at)}</td><td>${r.result}</td><td>${r.battle}</td><td>${r.deck}장</td><td>${r.gold}냥</td></tr>`).join("")}</table>`
+      :`<p style="color:var(--muted);font-size:13px;margin:0">아직 끝낸 여정이 없습니다. 여정을 마치면(완주하거나 쓰러지면) 여기에 쌓입니다.</p>`));
+}
+function showSettings(){
+  tPanel("설정",`<div class="tset"><div class="row"><span>🔊 소리</span><input type="range" id="tvol" min="0" max="100" value="${Math.round(SFX.vol*100)}"><b id="tvolv" style="width:26px;font-size:12px;color:var(--muted)">${Math.round(SFX.vol*100)}</b>
+    <button class="tbtn" id="tmute">${SFX.on?"끄기":"켜기"}</button></div><div class="row"><button class="tbtn" id="ttut">📖 튜토리얼 다시 보기</button></div></div>`);
+  const r=document.getElementById("tvol"), v=document.getElementById("tvolv"), m=document.getElementById("tmute");
+  r.disabled=!SFX.on; r.oninput=()=>{ sfxVol(r.value/100); v.textContent=r.value; }; r.onchange=()=>sfx("select");
+  m.onclick=()=>{ SFX.on=!SFX.on; try{ localStorage.setItem("ps-sound",SFX.on?"on":"off"); }catch(e){} m.textContent=SFX.on?"끄기":"켜기"; r.disabled=!SFX.on; if(SFX.on){ sfxCtx(); sfx("select"); } };
+  document.getElementById("ttut").onclick=()=>openBook();
+}
+document.getElementById("tpx").onclick=()=>{ document.getElementById("tpanel").hidden=true; };
+document.getElementById("tpanel").onclick=e=>{ if(e.target.id==="tpanel") e.target.hidden=true; };
+
+/* 떠다니는 3원색 */
+const titleBalls=(function(){
+  const scr=document.getElementById("titleover"), sv=scr.querySelector(".tballs"), NS="http://www.w3.org/2000/svg";
+  const C=[["R","--r"],["Y","--y"],["B","--b"]], COLV={R:"var(--r)",Y:"var(--y)",B:"var(--b)"}, BG={B:"v-night",R:"v-plum",Y:"v-paper"};
+  const KICK=16, CAP=.35, SIZE=.28;
+  sv.innerHTML=`<defs>${C.map(([n])=>`<clipPath id="tc${n}"><path class="c${n}"/></clipPath>`).join("")}</defs>
+    <g opacity=".75">
+      ${C.map(([n,v])=>`<path class="f${n}" fill="var(${v})"/>`).join("")}
+      <g clip-path="url(#tcR)"><path class="fY" fill="var(--o)"/></g>
+      <g clip-path="url(#tcY)"><path class="fB" fill="var(--g)"/></g>
+      <g clip-path="url(#tcR)"><path class="fB" fill="var(--p)"/></g>
+      <g clip-path="url(#tcR)"><g clip-path="url(#tcY)"><path class="fB" fill="var(--k)"/></g></g>
+      ${C.map(([n])=>`<path class="h${n}" fill="none" stroke="#fff" stroke-width="9" filter="url(#tglow)" opacity=".7"/>`).join("")}
+      ${C.map(([n,v])=>`<path class="g${n}" fill="none" stroke="color-mix(in srgb,var(${v}) 60%,#fff)" stroke-width="5" filter="url(#tglow)"/>`).join("")}
+      ${C.map(([n])=>`<path class="e${n}" fill="none" stroke="#fff" stroke-width="3.4"/>`).join("")}
+    </g>`;
+  const W=()=>scr.clientWidth, H=()=>scr.clientHeight, rnd=(a,b)=>a+Math.random()*(b-a);
+  let B=null, run=false, last=0, press=null;
+  const init=()=>{ B=C.map(([n],i)=>({n, base:[.55,.85,.4][i], dir:rnd(0,Math.PI*2), turn:rnd(-.012,.012), ph:i*2.1, wob:[2.2,3.1,1.6][i],
+    x:W()*(.22+.28*i), y:H()*rnd(.3,.65), boost:0, sq:0, sqT:0, sa:0, pe:0, pa:0, held:false, gs:0})); };
+  function blob(cx,cy,R,amp,k,ph,sq,sa,pa,pe){
+    const N=128, pts=[];
+    for(let i=0;i<N;i++){ const a=i/N*Math.PI*2; let r=(R+amp*Math.sin(a*k+ph))*(1-sq*Math.cos(2*(a-sa)));
+      let x=Math.cos(a)*r, y=Math.sin(a)*r;
+      if(pe>0){ const ca=Math.cos(pa), s2=Math.sin(pa), u=x*ca+y*s2, v=-x*s2+y*ca, u2=u*(1+pe)+R*pe, v2=v*(1-pe*.45); x=u2*ca-v2*s2; y=u2*s2+v2*ca; }
+      pts.push([cx+x,cy+y]); }
+    let d=`M${((pts[0][0]+pts[N-1][0])/2).toFixed(1)},${((pts[0][1]+pts[N-1][1])/2).toFixed(1)}`;
+    for(let i=0;i<N;i++){ const a=pts[i], b=pts[(i+1)%N]; d+=` Q${a[0].toFixed(1)},${a[1].toFixed(1)} ${((a[0]+b[0])/2).toFixed(1)},${((a[1]+b[1])/2).toFixed(1)}`; }
+    return d+"Z";
+  }
+  function ink(b,px,py){                           // 누른 쪽 바깥으로 잉크 방울 + 공 찌그러짐
+    const away=Math.atan2(py-b.y,px-b.x);
+    for(let i=0;i<7;i++){ const d=el("div","tink"), s=4+Math.random()*7;
+      Object.assign(d.style,{left:(px-s/2)+"px",top:(py-s/2)+"px",width:s+"px",height:s+"px",background:COLV[b.n],boxShadow:"0 0 0 1px rgba(255,255,255,.35)"});
+      scr.appendChild(d); const a=away+(Math.random()-.5)*1.9, dist=40+Math.random()*70, dx=Math.cos(a)*dist, dy=Math.sin(a)*dist;
+      d.animate([{transform:"translate(0,0) scale(1)",opacity:1},{transform:`translate(${dx*.7}px,${dy*.7-14}px)`,opacity:1,offset:.45},{transform:`translate(${dx}px,${dy+26}px) scale(.35)`,opacity:0}],
+        {duration:520+Math.random()*260,easing:"cubic-bezier(.2,.7,.4,1)"}).onfinish=()=>d.remove(); }
+    b.sq=.16; b.sqT=0; b.sa=away; sfx("drop");
+  }
+  function ring(x,y,r1){ const c=document.createElementNS(NS,"circle"); c.setAttribute("cx",x); c.setAttribute("cy",y); c.setAttribute("r",6);
+    c.setAttribute("fill","none"); c.setAttribute("stroke","#fff"); c.setAttribute("stroke-width","2"); sv.appendChild(c);
+    c.animate([{r:"6px",opacity:.9},{r:(r1||40)+"px",opacity:0}],{duration:450,easing:"ease-out"}).onfinish=()=>c.remove(); }
+  function bleed(b){                               // 공 자리에서 먹이 번지듯 새 배경으로 (가장자리는 어둡게 묻힘)
+    const to=BG[b.n], cur=scr.querySelector(".tbg.cur"); if(!to||scr._bgTo===to) return; scr._bgTo=to;
+    scr.querySelectorAll(".tbg.new").forEach(o=>o.remove());
+    const fid="tb"+Math.random().toString(36).slice(2,8), fs=document.createElementNS(NS,"svg");
+    fs.setAttribute("width","0"); fs.setAttribute("height","0"); fs.style.position="absolute";
+    fs.innerHTML=`<filter id="${fid}" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="3" seed="${(Math.random()*90)|0}"/><feDisplacementMap in="SourceGraphic" scale="60" xChannelSelector="R" yChannelSelector="G"/></filter>`;
+    document.body.appendChild(fs);
+    const wrapL=el("div","tbg new"); wrapL.style.filter=`url(#${fid})`; const lay=el("div","tbg "+to); wrapL.appendChild(lay); cur.after(wrapL);
+    const w=W(), h=H(), far=Math.hypot(Math.max(b.x,w-b.x),Math.max(b.y,h-b.y)), end=far*1.35+90;
+    lay.animate([{clipPath:`circle(0px at ${b.x}px ${b.y}px)`},{clipPath:`circle(${far*.4}px at ${b.x}px ${b.y}px)`,offset:.3},{clipPath:`circle(${end}px at ${b.x}px ${b.y}px)`}],
+      {duration:1400,easing:"cubic-bezier(.3,.6,.4,1)",fill:"forwards"}).onfinish=()=>{
+        if(!wrapL.isConnected){ fs.remove(); return; }
+        cur.className="tbg cur "+to;
+        wrapL.animate([{opacity:1},{opacity:0}],{duration:120,easing:"ease-out",fill:"forwards"}).onfinish=()=>{ wrapL.remove(); fs.remove(); }; };
+  }
+  const loc=e=>({x:e.clientX, y:e.clientY});
+  scr.addEventListener("pointerdown",e=>{
+    if(e.target.closest(".tcard,.tpanel")||!run) return;
+    const p=loc(e), h=H(); let hit=null, best=1e9;
+    B.forEach(b=>{ const d=Math.hypot(p.x-b.x,p.y-b.y); if(d<SIZE*h&&d<best){ best=d; hit=b; } });
+    if(!hit) return;
+    try{ scr.setPointerCapture(e.pointerId); }catch(_){}
+    press={b:hit, held:false};
+    press.timer=setTimeout(()=>{ if(!press) return; press.held=true; hit.held=true; hit.boost=0; ring(hit.x,hit.y,SIZE*h*.9); },200);
+  });
+  scr.addEventListener("pointermove",e=>{
+    if(!press||!press.held) return; const p=loc(e), b=press.b, R=SIZE*H(), pull=Math.hypot(p.x-b.x,p.y-b.y), k=Math.min(1,pull/(R*2.5));
+    b.pa=Math.atan2(p.y-b.y,p.x-b.x); b.pe=CAP*(1-Math.pow(1-k,2)); b.sq=0;
+  });
+  const release=e=>{
+    if(!press) return; clearTimeout(press.timer); const b=press.b, p=loc(e), h=H();
+    if(!press.held){ b.boost=Math.min(b.boost+KICK,KICK*2.2); b.dir=Math.atan2(b.y-p.y,b.x-p.x); ink(b,p.x,p.y); ring(p.x,p.y); bleed(b); }
+    else { const dx=p.x-b.x, dy=p.y-b.y, pull=Math.hypot(dx,dy); b.pe=0;
+      if(pull>12){ b.dir=Math.atan2(-dy,-dx); b.boost=KICK*3*Math.min(1,pull/(SIZE*h*2.5)); ink(b,p.x,p.y); ring(b.x,b.y,SIZE*h); b.sq=Math.min(.25,pull/900); b.sa=b.dir; bleed(b); } }
+    b.held=false; press=null;
+  };
+  scr.addEventListener("pointerup",release); scr.addEventListener("pointercancel",release);
+  function tick(now){
+    if(!run) return; requestAnimationFrame(tick);
+    const dt=Math.min(50,now-last)/16.7; last=now; const t=now/1000, w=W(), h=H();
+    B.forEach(b=>{
+      b.gs+=((b.held?1:0)-b.gs)*.25; const R=h*SIZE*(1+.06*b.gs);
+      b.turn+=rnd(-.0015,.0015); b.turn=Math.max(-.02,Math.min(.02,b.turn)); b.dir+=b.turn*dt;
+      b.boost*=Math.pow(.975,dt);
+      const sp=b.held?0:b.base+b.boost; b.x+=Math.cos(b.dir)*sp*dt; b.y+=Math.sin(b.dir)*sp*dt;
+      if(b.x<R){ b.x=R; b.dir=Math.PI-b.dir; } if(b.x>w-R){ b.x=w-R; b.dir=Math.PI-b.dir; }
+      if(b.y<R){ b.y=R; b.dir=-b.dir; } if(b.y>h-R){ b.y=h-R; b.dir=-b.dir; }
+      b.sq*=Math.pow(.86,dt); b.sqT+=dt*.5;
+      const d=blob(b.x,b.y,R,R*.016,9,-t*b.wob+b.ph,b.sq*Math.cos(b.sqT),b.sa,b.pa,b.held?b.pe:0);
+      sv.querySelectorAll(".f"+b.n+",.c"+b.n+",.e"+b.n+",.g"+b.n+",.h"+b.n).forEach(p=>p.setAttribute("d",d));
+    });
+  }
+  return { start(){ if(run) return; if(!B) init(); run=true; last=performance.now(); requestAnimationFrame(tick); }, stop(){ run=false; } };
+})();
 
 /* ---------- 튜토리얼 다시 보기 ---------- */
 let bookPaused=false;
@@ -3154,6 +3419,7 @@ function closePile(){ document.getElementById("pileover").hidden=true; }
 function finish(win){
   S.over=true; S.busy=false; S.acting=null; render();
   if(win){ RUN.hp=S.hp; RUN.rewardFor=RUN.node; later(showReward,700); return; }
+  recAdd("패배");
   document.getElementById("ovt").textContent="패배";
   document.getElementById("ovp").innerHTML=
     `${RUN.battle}번째 전투에서 쓰러졌습니다. 덱 ${RUN.deck.length}장 · ${COIN}${RUN.gold}냥.`;
@@ -3284,7 +3550,7 @@ function enterNode(i){
   else startBattle();
 }
 function winRun(){
-  clearTutQ();
+  clearTutQ(); recAdd("완주");
   document.getElementById("ovt").textContent="여정 완료";
   document.getElementById("ovp").innerHTML=
     `마지막 적을 넘었습니다. 남은 체력 ${RUN.hp}/${RUN.maxHp} · 덱 ${RUN.deck.length}장 · ${COIN}${RUN.gold}냥.`;
@@ -3504,7 +3770,7 @@ document.getElementById("shopgo").onclick=leaveShop;
 document.getElementById("again").onclick=()=>{
   document.getElementById("over").hidden=true;
   setPhase("내 턴",false);
-  newRun();
+  showTitle();                                     // 다시 하기 — 시작 화면으로
 };
-newRun();
+showTitle();
 </script>
