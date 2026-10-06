@@ -1015,7 +1015,7 @@ DEF.cW2={n:"하양",kind:"색상 · 희귀 · 강화",type:"white2",e:1,upv:{},
            (예: 정전기 "무작위 …" → "모든 적에게 …")
 
    dmg·burnT·weak·vuln 중 하나라도 있으면 "적을 골라야 하는 카드",
-   전부 없으면 고르는 즉시 발동합니다(aoe·rand도 즉시 발동).
+   전부 없으면 고르는 즉시 발동합니다. aoe·rand도 적을 건드리면 조준해야 나간다(아무 적에게나 겨누면 된다).
    여기 없는 효과가 필요하면 말해 주세요 — 핸들러를 추가하겠습니다.
    ══════════════════════════════════════════════════════════════ */
 
@@ -1864,7 +1864,7 @@ function dealTo(f,amt){
 function foeEffect(d){ return !!(d.dmg||d.burnT||d.weak||d.vuln); }
 function needsTarget(d){
   if(d.type==="atk") return true;
-  if(d.type==="skill") return !d.aoe&&!d.rand&&foeEffect(d);
+  if(d.type==="skill") return foeEffect(d);      // 전체 · 무작위 공격도 조준해야 나간다 — 적이 1명이어도
   return false;
 }
 function frontSlot(comp){ // 앞쪽부터 정확히 일치하는 칸
@@ -2102,7 +2102,7 @@ function playSelected(foeIdx){
   }
   // 연출 — 손패에서 사라지기 전에 카드 자리를 재 둔다. 물방울로 변해 대상에게 날아간다
   { const hc=document.getElementById("hand").children[idx];
-    fxUse(hc&&hc.getBoundingClientRect(), d, target, usedComp);
+    fxUse(hc&&hc.getBoundingClientRect(), d, (d.aoe||d.rand)?null:target, usedComp);   // 전체 · 무작위는 적 줄 전체로 날아간다
     if(!d.exhaust) fxDiscard([hc], fxMs(FX_SHRINK)); }   // 쓴 카드는 물방울을 내놓고 버린 덱으로
   S.e-=d.e;
   S.hand.splice(idx,1); S.sel=null;
@@ -2782,35 +2782,39 @@ function drawAura(sv,list,t,gid){
 
 /* ---------- 연출: 대상 지정 ----------
    대상이 필요한 카드를 고르면, 그 카드 밑에서 마우스까지 흐르는 점선(둥근 화살촉)이 이어진다.
-   점선은 적 카드 위 · 내 손패 카드 아래에 그린다(#fxaim, z 4). 적 위에 올리면 흰 인장(테두리만)이 정방향으로 쾅 찍힌다 */
-let aimMouse=null, aimFoe=-1, aimSince=0;
+   점선은 적 카드 위 · 내 손패 카드 아래에 그린다(#fxaim, z 4). 화살은 적 위에서도 커서 자리를 그대로 가리킨다.
+   포물선은 위로 솟았다 내려오지만, 적이 손패 거의 바로 위면(가로 60px 안) 솟는 높이를 빼서 곧게 올라가 화살이 위를 본다.
+   겨눠진 악귀는 움츠리며 떨고(S2) 테두리가 붉어진다(R1). 전체 · 무작위 공격이면 살아 있는 적이 전부 떤다 */
+let aimMouse=null, aimFoe=-1, aimSince=0, aimShook=[];
 document.addEventListener("mousemove",e=>{ aimMouse={x:e.clientX,y:e.clientY}; });
-function aimCurve(x0,y0,x1,y1){ const mx=(x0+x1)/2, my=Math.min(y0,y1)-70; return `M${x0},${y0} Q${mx},${my} ${x1},${y1}`; }
-function aimStamp(b,k){
-  const pad=7, cx=b.left+b.width/2, cy=b.top+b.height/2, w=b.width+pad*2, h=b.height+pad*2, T=0.14;
-  let s, op;
-  if(k<T){ const q=k/T; s=1.45-0.47*q*q; op=Math.min(1,q*2.2); }
-  else if(k<T+0.1){ const q=(k-T)/0.1; s=0.98+0.04*Math.sin(q*Math.PI); op=1; }
-  else { s=1; op=1; }
-  let g=`<g transform="translate(${cx},${cy}) scale(${s})" opacity="${op}" filter="url(#fxrough)">
-    <rect x="${-w/2}" y="${-h/2}" width="${w}" height="${h}" rx="3" fill="none" stroke="#FFFFFF" stroke-width="3.5"/></g>`;
-  if(k>=T&&k<T+0.45){ const q=(k-T)/0.45;   // 정화의 흰 인장 — 안쪽은 비우고, 찍히는 순간 흰 물방울이 튄다
-    for(let i=0;i<10;i++){ const a=i/10*Math.PI*2+0.3, rx=w/2+4+q*18, ry=h/2+3+q*12;
-      g+=`<circle cx="${cx+Math.cos(a)*rx}" cy="${cy+Math.sin(a)*ry}" r="${2.4*(1-q)}" fill="#FFFFFF" opacity="${1-q}"/>`; } }
-  return g;
+function aimCurve(x0,y0,x1,y1){
+  const a=Math.min(1,Math.max(0,(Math.abs(x1-x0)-60)/120)), w=a*a*(3-2*a);     // 60~180px 사이는 섞는다
+  const mx=(x0+x1)/2, my0=(y0+y1)/2, my=my0+(Math.min(y0,y1)-70-my0)*w;
+  return `M${x0},${y0} Q${mx},${my} ${x1},${y1}`;
 }
+function aimShake(t,k,i){               // 움츠리며 떨기 — 뒤로 살짝 작아진 채 덜덜
+  const n=(f,p)=>Math.sin(t*f+p+i*2.3), c=Math.min(1,k/0.18);
+  return `translate(${(n(58,0)+n(41,1))*1.1*c}px,${3*c+n(47,2)*0.7*c}px) scale(${1-0.045*c}) rotate(${n(33,4)*0.6*c}deg)`;
+}
+function aimRed(f,k){                   // 붉은 테두리 — 겨눈 순간부터 0.25초에 걸쳐 오른다
+  const e=Math.min(1,k/0.25);
+  f.style.borderColor=`color-mix(in srgb,#C9483E ${70*e}%,var(--flag))`;
+  f.style.boxShadow=`0 0 ${14*e}px ${2*e}px rgba(201,72,62,${0.45*e}), inset 0 0 ${10*e}px rgba(201,72,62,${0.25*e})`;
+}
+function aimCalm(){ aimShook.forEach(f=>{ f.style.transform=""; f.style.transition=""; f.style.borderColor=""; f.style.boxShadow=""; }); aimShook=[]; }
 (function aimTick(ts){
   requestAnimationFrame(aimTick);
   const line=document.getElementById("fxaim"), mark=document.getElementById("fxaimmark");
   fxPin(line);
   if(!line||!mark) return;
-  const off=()=>{ if(line.innerHTML) line.innerHTML=""; if(mark.innerHTML) mark.innerHTML=""; aimFoe=-1; };
+  const off=()=>{ if(line.innerHTML) line.innerHTML=""; if(mark.innerHTML) mark.innerHTML=""; aimFoe=-1; aimCalm(); };
   if(typeof S==="undefined"||!S||S.over||S.busy||S.paused||S.sel===null||!aimMouse) return off();
   const d=defOf(S.hand[S.sel]); if(!d||!needsTarget(d)) return off();
   const hc=document.getElementById("hand").children[S.sel]; if(!hc) return off();
   const cr=hc.getBoundingClientRect(), x0=cr.left+cr.width/2, y0=cr.top+cr.height/2;   // 카드 한가운데 — 카드 밑에서 나온다
+  const fs=[...document.getElementById("foes").children];
   let snap=null, idx=-1;
-  [...document.getElementById("foes").children].forEach((f,i)=>{
+  fs.forEach((f,i)=>{
     if(!f.classList.contains("targetable")) return;
     const b=f.getBoundingClientRect();
     if(aimMouse.x>=b.left-4&&aimMouse.x<=b.right+4&&aimMouse.y>=b.top-8&&aimMouse.y<=b.bottom+14){ snap=b; idx=i; }
@@ -2818,13 +2822,18 @@ function aimStamp(b,k){
   if(idx!==aimFoe){ aimFoe=idx; aimSince=ts;
     // 겨눈 적에게 실제로 들어갈 피해로 카드 문구를 바꿔 쓴다. 겨누지 않으면 힘만 반영
     const cx=hc.querySelector(".ctx"); if(cx) cx.innerHTML=cardTx(S.hand[S.sel], idx>=0?S.foes[idx]:null); }
-  const end = snap ? {x:snap.left+snap.width/2, y:snap.top+snap.height*0.55} : aimMouse;
-  const col = snap ? "#FFF4D6" : "#C9C3B4";
+  const end=aimMouse, col = snap ? "#FFF4D6" : "#C9C3B4";
   line.innerHTML=`<defs><marker id="fxah" viewBox="-6 -6 12 12" refX="0" refY="0" markerWidth="4.2" markerHeight="4.2" orient="auto" markerUnits="strokeWidth">
     <path d="M-3.5,-3.6 L3.2,0 L-3.5,3.6 Z" fill="${col}" stroke="${col}" stroke-width="2.4" stroke-linejoin="round"/></marker></defs>
     <path d="${aimCurve(x0,y0,end.x,end.y)}" fill="none" stroke="${col}" stroke-width="4" stroke-linecap="round"
       stroke-dasharray="2 12" stroke-dashoffset="${-ts/1000*40}" marker-end="url(#fxah)"/>`;
-  mark.innerHTML = snap ? aimStamp(snap,(ts-aimSince)/1000) : "";
+  if(mark.innerHTML) mark.innerHTML="";
+  // 겨눠진 악귀 — 전체 · 무작위 공격이면 살아 있는 적 모두
+  const tg = !snap ? [] : (d.aoe||d.rand) ? fs.filter(f=>f.classList.contains("targetable")) : [fs[idx]];
+  aimShook.forEach(f=>{ if(tg.indexOf(f)<0){ f.style.transform=""; f.style.transition=""; f.style.borderColor=""; f.style.boxShadow=""; } });
+  const k=(ts-aimSince)/1000;
+  tg.forEach((f,i)=>{ f.style.transition="none"; f.style.transform=aimShake(ts/1000,k,fs.indexOf(f)); aimRed(f,k); });
+  aimShook=tg;
 })(0);
 
 /* ---------- 손패 배치 — 슬더슬처럼 겹쳐 부채꼴로 ----------
